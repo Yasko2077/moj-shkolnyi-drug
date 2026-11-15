@@ -103,8 +103,6 @@ begin
      or has_column_privilege('authenticated','public.profiles','id','UPDATE') then
     raise exception 'profile_update_allowlist_invalid';
   end if;
-end;
-
   if to_regclass('public.profiles') is null
      or has_column_privilege('authenticated','public.profiles','account_type','UPDATE') then
     raise exception 'tester_account_type_missing_or_client_writable';
@@ -125,6 +123,7 @@ end;
     raise exception 'authenticated_role_can_mutate_role_assignments';
   end if;
 
+end;
 $verify$;
 
 select
