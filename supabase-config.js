@@ -4,5 +4,6 @@ window.YNTYMAK_CONFIG = {
   supabasePublishableKey: "",
   enableHostedAI: false,
   enableCloudInitiatives: false,
-  enableCloudProjects: false
+  enableCloudProjects: false,
+  enableCloudEvents: false
 };
