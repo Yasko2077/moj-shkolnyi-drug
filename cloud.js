@@ -34,7 +34,7 @@
   async function checkAdmin() {
     const c = getClient();
     if (!c || !session) { isAdmin = false; return false; }
-    const { data, error } = await c.rpc('is_platform_admin');
+    const { data, error } = await c.rpc('is_verification_representative');
     if (error) { isAdmin = false; throw error; }
     isAdmin = data === true;
     return isAdmin;
