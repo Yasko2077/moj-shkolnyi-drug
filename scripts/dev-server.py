@@ -62,7 +62,8 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
     def do_GET(self):
-        if urlsplit(self.path).path == "/__yntymak_version":
+        path = urlsplit(self.path).path
+        if path == "/__yntymak_version":
             body = json.dumps({"version": _version}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -71,37 +72,36 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        super().do_GET()
-
-    def end_headers(self):
-        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
-        super().end_headers()
-
-    def do_GET_file(self):
-        pass
-
-    def copyfile(self, source, outputfile):
-        # Inject a tiny live-refresh watcher into HTML only.
-        if self.path.split("?", 1)[0].endswith(".html"):
-            data = source.read()
-            watcher = b"""<script>
+        if path.endswith(".html") or path == "/":
+            file_path = Path(self.translate_path(self.path))
+            if file_path.is_file():
+                data = file_path.read_bytes()
+                watcher = b"""<script>
 (() => {
   let seen = null;
   setInterval(async () => {
     try {
       const response = await fetch('/__yntymak_version', {cache:'no-store'});
-      const data = await response.json();
-      if (seen === null) seen = data.version;
-      else if (data.version !== seen) location.reload();
+      const state = await response.json();
+      if (seen === null) seen = state.version;
+      else if (state.version !== seen) location.reload();
     } catch (_) {}
   }, 2500);
 })();
 </script>"""
-            data = data.replace(b"</body>", watcher + b"</body>")
-            outputfile.write(data)
-            return
-        super().copyfile(source, outputfile)
+                data = data.replace(b"</body>", watcher + b"</body>")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+        super().do_GET()
 
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+        super().end_headers()
 
 if __name__ == "__main__":
     if not (ROOT / ".git").exists():
