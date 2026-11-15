@@ -87,9 +87,9 @@
     if (cfg.enableAuthCaptcha === true && !String(captchaToken || '').trim()) {
       throw new Error('Пройди проверку безопасности перед входом.');
     }
-    const { data, error } = await c.auth.signInWithPassword({
-      email, password, options: { captchaToken: String(captchaToken || '') }
-    });
+    const credentials = { email, password };
+    if (String(captchaToken || '').trim()) credentials.options = { captchaToken: String(captchaToken).trim() };
+    const { data, error } = await c.auth.signInWithPassword(credentials);
     if (error) throw error;
     session = data.session; authUser = data.user;
     await ensureProfile(); await checkAdmin();
@@ -105,10 +105,9 @@
     if (cfg.enableAuthCaptcha === true && !String(captchaToken || '').trim()) {
       throw new Error('Пройди проверку безопасности перед восстановлением пароля.');
     }
-    const { error } = await c.auth.resetPasswordForEmail(cleanEmail, {
-      redirectTo: `${location.origin}${location.pathname}`,
-      captchaToken: String(captchaToken || '')
-    });
+    const resetOptions = { redirectTo: `${location.origin}${location.pathname}` };
+    if (String(captchaToken || '').trim()) resetOptions.captchaToken = String(captchaToken).trim();
+    const { error } = await c.auth.resetPasswordForEmail(cleanEmail, resetOptions);
     if (error) throw error;
     return true;
   }
