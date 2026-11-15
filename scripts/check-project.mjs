@@ -358,7 +358,7 @@ check(app.includes("navigator.serviceWorker.register('./service-worker.js')") &&
   'The app must register its service worker and keep mobile menu accessibility state in sync.');
 
 const homeStart = app.indexOf('function home(){');
-const homeEnd = app.indexOf('\\nfunction ideaCard', homeStart);
+const homeEnd = app.indexOf('function ideaCard', homeStart);
 const homeSource = homeStart >= 0 && homeEnd > homeStart ? app.slice(homeStart, homeEnd) : '';
 check(Boolean(homeSource) && homeSource.includes('data-action="open-auth"') &&
   homeSource.includes("featuresTitle:") && homeSource.includes('districtsTitle:'),
