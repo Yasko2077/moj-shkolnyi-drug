@@ -6,5 +6,6 @@ window.YNTYMAK_CONFIG = {
   enableCloudInitiatives: false,
   enableCloudProjects: false,
   enableCloudEvents: false,
-  enableCloudContent: false
+  enableCloudContent: false,
+  enableCloudElections: false
 };
