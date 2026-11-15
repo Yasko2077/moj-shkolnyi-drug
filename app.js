@@ -573,7 +573,7 @@ window.addEventListener('yntymak:password-recovery',()=>passwordRecoveryModal())
 $('#authButton').addEventListener('click',()=>{if(window.YntymakCloud?.getSession()){go('profile');toast('Аккаунт активен.');}else loginModal();});
 $('#signOutButton').addEventListener('click',async()=>{try{await window.YntymakCloud?.signOut();}catch(e){toast(e.message);return;}state.admin=false;state.realAdmin=false;state.cloudProfile=false;activateAccountStore();render();toast('Сессия завершена.');});
 $('#languageBtn').addEventListener('click',()=>{state.lang=state.lang==='RU'?'KG':'RU';render();});
-$('#mobileMenu').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
+$('#mobileMenu').addEventListener('click',()=>{const open=$('#sidebar').classList.toggle('open');$('#mobileMenu').setAttribute('aria-expanded',String(open));});
 document.addEventListener('click',e=>{const p=e.target.closest('[data-page]');if(p&&!$('#pageContent').contains(p))go(p.dataset.page);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 document.addEventListener('change',e=>{const cb=e.target.closest('[data-task-toggle]');if(!cb)return;const p=db.projects.find(x=>x.id===cb.dataset.taskToggle),i=Number(cb.dataset.taskIndex);if(!p||!Number.isInteger(i)||i<0||i>=(p.tasks||[]).length)return;p.completedTasks=Array.isArray(p.completedTasks)?p.completedTasks:[];if(cb.checked&&!p.completedTasks.includes(i))p.completedTasks.push(i);if(!cb.checked)p.completedTasks=p.completedTasks.filter(x=>x!==i);persist();if(cb.closest('#modalRoot')){const pct=p.tasks.length?Math.round(p.completedTasks.length/p.tasks.length*100):0;const bar=$('.task-progress .bar span',$('#modalRoot'));if(bar)bar.style.width=pct+'%';const label=$('.task-progress .meta-line span:last-child',$('#modalRoot'));if(label)label.textContent=pct+'%';cb.closest('.task-line')?.classList.toggle('task-done',cb.checked);}else render();toast(cb.checked?'Шаг отмечен выполненным.':'Отметка снята.');});
@@ -597,6 +597,9 @@ if(window.YntymakCloud?.configured()){
   }
   render();
  }).catch(e=>console.warn('Supabase initialization:',e.message));
+}
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(error=>console.warn('Offline shell registration:',error.message)));
 }
 render();
 })();
