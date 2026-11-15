@@ -79,6 +79,21 @@
     const { error } = await c.auth.signOut(); if (error) throw error;
     session = null; authUser = null; isAdmin = false;
   }
+  async function listActiveSchools() {
+    const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт.');
+    const {data,error}=await c.from('schools').select('id,name,district_key').eq('is_active',true).order('name',{ascending:true});
+    if(error) throw error; return data||[];
+  }
+  async function assignProfileSchool({userId,schoolId,reason}) {
+    const c=getClient(); if(!c||!session||!isAdmin) throw new Error('Назначение школы доступно только подтверждённому представителю.');
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(userId||'')) ||
+       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(schoolId||'')) ||
+       String(reason||'').trim().length<8 || String(reason||'').trim().length>500) {
+      throw new Error('Проверь данные назначения школы.');
+    }
+    const {error}=await c.rpc('assign_profile_school',{p_user_id:userId,p_school_id:schoolId,p_reason:String(reason).trim()});
+    if(error) throw error;
+  }
   async function listInitiatives() {
     const c = getClient();
     if (!c || !session) throw new Error('Для просмотра облачных предложений войди в аккаунт.');
@@ -312,7 +327,7 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, getProjectMemberCounts, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, askHostedAI,
+    ensureProfile, checkAdmin, listActiveSchools, assignProfileSchool, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, getProjectMemberCounts, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
     initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
