@@ -1,0 +1,62 @@
+\set ON_ERROR_STOP on
+
+-- Synthetic role assignment only. No real accounts or student responses.
+insert into public.role_assignments(
+  user_id,role_key,school_id,district_key,organization_name,term_label,
+  valid_from,valid_until,verified_by
+) values(
+  '00000000-0000-0000-0000-000000000001',
+  'verification_representative',null,null,'Synthetic test verifier','test',
+  current_date,current_date+30,null
+);
+
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+
+select public.create_community_poll(
+  'Synthetic privacy poll',
+  'Synthetic poll used only to check individual response privacy.',
+  array['Synthetic option A','Synthetic option B'],
+  now()+interval '1 day'
+) as poll_id \gset
+
+select id as option_id
+from public.poll_options
+where poll_id=:'poll_id'::uuid and label='Synthetic option A'
+\gset
+
+select set_config('test.poll_id', :'poll_id', false);
+select set_config('test.option_id', :'option_id', false);
+
+-- A synthetic student casts one vote.
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',false);
+select public.cast_poll_vote(
+  current_setting('test.poll_id')::uuid,
+  current_setting('test.option_id')::uuid
+);
+
+-- The verifier can read aggregate results, but not the student's individual row.
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+do $privacy$
+declare
+  v_poll uuid := current_setting('test.poll_id')::uuid;
+  v_private_rows bigint;
+  v_aggregate_votes bigint;
+begin
+  select count(*) into v_private_rows
+  from public.poll_responses
+  where poll_id=v_poll;
+  if v_private_rows<>0 then
+    raise exception 'verifier_can_read_individual_poll_responses';
+  end if;
+
+  select coalesce(sum(vote_count),0) into v_aggregate_votes
+  from public.get_poll_results(v_poll);
+  if v_aggregate_votes<>1 then
+    raise exception 'aggregate_poll_votes_expected_1_got_%',v_aggregate_votes;
+  end if;
+end;
+$privacy$;
+
+reset role;
+select 'poll_response_privacy_scenario_passed' as result;
