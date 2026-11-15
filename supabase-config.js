@@ -9,6 +9,7 @@ window.YNTYMAK_CONFIG = {
   enableCloudContent: false,
   enableCloudElections: false,
   // Public self-service registration stays closed until an adult owner configures Supabase CAPTCHA.
+  enableAuthCaptcha: false,
   enableSelfServiceSignup: false,
   turnstileSiteKey: ""
 };
