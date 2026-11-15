@@ -26,6 +26,9 @@ const publicConfig = await readFile(path.join(output, "supabase-config.js"), "ut
 if (/suutpjjcendapzpebkcp|sb_publishable_|sb_secret_|service_role/i.test(publicConfig)) {
   throw new Error("The public preview config must not inherit the repository's live Supabase project or credentials.");
 }
+const configMatch = publicConfig.match(/window\\.YNTYMAK_CONFIG\\s*=\\s*(\\{[\\s\\S]*\\});/);
+if (!configMatch) throw new Error("Generated public Supabase config is missing or malformed.");
+const previewConfig = JSON.parse(configMatch[1]);
 for (const flag of [
   "enableHostedAI",
   "enableCloudInitiatives",
@@ -36,9 +39,12 @@ for (const flag of [
   "enableAuthCaptcha",
   "enableSelfServiceSignup"
 ]) {
-  if (!new RegExp('"'+flag+'"\\\\s*:\\\\s*false').test(publicConfig)) {
+  if (previewConfig[flag] !== false) {
     throw new Error(`Safe preview default is missing or enabled: ${flag}`);
   }
+}
+if (previewConfig.supabaseUrl !== "" || previewConfig.supabasePublishableKey !== "") {
+  throw new Error("Default public preview must not be connected to any Supabase project.");
 }
 
 console.log(`Static publish directory verified (${files.size} approved files; no private docs, SQL, admin files, or live Supabase connection).`);
