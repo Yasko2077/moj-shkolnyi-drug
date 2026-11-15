@@ -79,6 +79,60 @@
     const { error } = await c.auth.signOut(); if (error) throw error;
     session = null; authUser = null; isAdmin = false;
   }
+  async function listInitiatives() {
+    const c = getClient();
+    if (!c || !session) throw new Error('Для просмотра облачных предложений войди в аккаунт.');
+    const { data, error } = await c.from('initiatives')
+      .select('id,title,description,category,scope,district_key,target_label,status,created_at')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    return (data || []).map(x => ({
+      id: x.id,
+      title: x.title,
+      description: x.description,
+      category: x.category,
+      scope: x.scope,
+      district: x.district_key || '',
+      target: x.target_label || (x.scope === 'city' ? 'Весь Бишкек' : ''),
+      status: ({ review: 'review', published: 'open', completed: 'closed', rejected: 'rejected' })[x.status] || 'review',
+      created: String(x.created_at).slice(0, 10),
+      author: 'Участник',
+      support: 0,
+      response: '',
+      comments: [],
+      source: 'cloud'
+    }));
+  }
+  async function createInitiative({ title, description, category, scope, district = '', target = '' }) {
+    const c = getClient();
+    if (!c || !session?.user) throw new Error('Войди в аккаунт, чтобы отправить предложение.');
+    const cleanTitle = String(title || '').trim();
+    const cleanDescription = String(description || '').trim();
+    if (cleanTitle.length < 5 || cleanTitle.length > 120 || cleanDescription.length < 20 || cleanDescription.length > 1200) {
+      throw new Error('Проверь длину названия и описания предложения.');
+    }
+    if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}|(?:\\+?996|0)\\s?\\d{3}[\\s-]?\\d{3}[\\s-]?\\d{3}|\\b\\d{10,}\\b/i.test(cleanTitle + ' ' + cleanDescription)) {
+      throw new Error('Не добавляй контактные и личные данные в предложение.');
+    }
+    const { data: profile } = await c.from('profiles').select('school_id').eq('id', session.user.id).maybeSingle();
+    const row = {
+      created_by: session.user.id,
+      title: cleanTitle,
+      description: cleanDescription,
+      category: String(category || 'other').slice(0, 60),
+      scope: ['school','district','city'].includes(scope) ? scope : 'school',
+      district_key: ['lenin','pervomai','oktyabr','sverdlov'].includes(district) ? district : null,
+      school_id: profile?.school_id || null,
+      target_label: String(target || '').trim().slice(0, 120) || null,
+      status: 'review'
+    };
+    const { data, error } = await c.from('initiatives').insert(row)
+      .select('id,title,description,category,scope,district_key,target_label,status,created_at')
+      .single();
+    if (error) throw error;
+    return data;
+  }
   async function askHostedAI(message, language = 'ru', history = []) {
     const c = getClient();
     if (!cfg.enableHostedAI || !c || !session) throw new Error('Внешняя ИИ-модель не подключена. Доступен локальный помощник.');
@@ -90,7 +144,7 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, checkAdmin, askHostedAI,
+    ensureProfile, checkAdmin, listInitiatives, createInitiative, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI)
   };
