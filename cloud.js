@@ -201,6 +201,15 @@
     return true;
   }
 
+  async function listProjectJoinRequests(projectId) {
+    const c=getClient();
+    if(!c||!session?.user) throw new Error('Войди в аккаунт.');
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(projectId||''))) throw new Error('Некорректный идентификатор проекта.');
+    const {data,error}=await c.from('project_join_requests').select('id,message,status,created_at').eq('project_id',projectId).eq('status','pending').order('created_at',{ascending:true});
+    if(error) throw error;
+    return data||[];
+  }
+
   async function listEvents() {
     const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт для просмотра мероприятий.');
     const {data,error}=await c.from('events').select('id,event_key,title,is_open,description,event_date,place_label,capacity,scope,target_label,district_key').order('event_date',{ascending:true});
@@ -286,7 +295,7 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, askHostedAI,
+    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
     initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
