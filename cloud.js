@@ -1,7 +1,7 @@
 /* Supabase Auth + single-admin verification + optional hosted AI. All authorization must also be enforced by RLS/RPC. */
 (() => {
   const cfg = window.YNTYMAK_CONFIG || {};
-  let client = null, session = null, authUser = null, isAdmin = false;
+  let client = null, session = null, authUser = null, isAdmin = false, passwordRecoveryPending = false;
   const configured = () => Boolean(cfg.supabaseUrl && cfg.supabasePublishableKey && window.supabase?.createClient);
   function getClient() {
     if (!configured()) return null;
@@ -42,11 +42,15 @@
   async function init() {
     const c = getClient();
     if (!c) return { configured: false, session: null, isAdmin: false };
-    await refresh();
-    c.auth.onAuthStateChange((_event, next) => {
+    c.auth.onAuthStateChange((event, next) => {
       session = next || null; authUser = session?.user || null;
       if (!session) isAdmin = false;
+      if (event === 'PASSWORD_RECOVERY') {
+        passwordRecoveryPending = true;
+        window.dispatchEvent(new Event('yntymak:password-recovery'));
+      }
     });
+    await refresh();
     if (session) {
       try { await ensureProfile(); } catch (e) { console.warn('Profile bootstrap needs migration/configuration:', e.message); }
       try { await checkAdmin(); } catch (e) { console.warn('Admin check failed:', e.message); }
@@ -79,6 +83,32 @@
     session = data.session; authUser = data.user;
     await ensureProfile(); await checkAdmin();
     return { user: authUser, isAdmin };
+  }
+  async function requestPasswordReset(email) {
+    const c = getClient();
+    if (!c) throw new Error('Подключение Supabase ещё не настроено.');
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) {
+      throw new Error('Укажи корректную электронную почту в форме входа.');
+    }
+    const { error } = await c.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo: `${location.origin}${location.pathname}`
+    });
+    if (error) throw error;
+    return true;
+  }
+  async function updatePassword(newPassword) {
+    const c = getClient();
+    if (!c || !session?.user || !passwordRecoveryPending) {
+      throw new Error('Открой ссылку восстановления из письма, прежде чем задавать новый пароль.');
+    }
+    if (String(newPassword || '').length < 8 || String(newPassword || '').length > 72) {
+      throw new Error('Новый пароль должен содержать от 8 до 72 символов.');
+    }
+    const { error } = await c.auth.updateUser({ password: String(newPassword) });
+    if (error) throw error;
+    passwordRecoveryPending = false;
+    return true;
   }
   async function signOut() {
     const c = getClient(); if (!c) return;
@@ -480,10 +510,10 @@
     return data.answer;
   }
   window.YntymakCloud = {
-    configured, getClient, init, refresh, signUp, signIn, signOut,
+    configured, getClient, init, refresh, signUp, signIn, signOut, requestPasswordReset, updatePassword,
     ensureProfile, getMyProfile, updateMyProfile, checkAdmin, listActiveSchools, assignProfileSchool, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, getProjectMemberCounts, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, listElections, getElectionCandidates, getMyElectionReceipt, createElection, setElectionEligibility, submitElectionCandidate, listElectionCandidateApplications, listElectionObjections, reviewElectionCandidate, advanceElectionStage, castElectionVote, getElectionResults, submitElectionObjection, reviewElectionObjection, askHostedAI,
     getSession: () => session, getUser: () => authUser,
-    isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
+    isAdmin: () => isAdmin, isPasswordRecovery: () => passwordRecoveryPending, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
     initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
     projectsEnabled: () => Boolean(cfg.enableCloudProjects),
     eventsEnabled: () => Boolean(cfg.enableCloudEvents),
