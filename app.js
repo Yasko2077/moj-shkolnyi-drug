@@ -406,8 +406,12 @@ function loginModal(){
   window.YNTYMAK_CONFIG?.enableAuthCaptcha===true &&
   Boolean(String(window.YNTYMAK_CONFIG?.turnstileSiteKey||'').trim());
  const signupEnabled=authCaptchaEnabled && window.YNTYMAK_CONFIG?.enableSelfServiceSignup===true;
+ const captchaMisconfigured=configured && window.YNTYMAK_CONFIG?.enableAuthCaptcha===true && !authCaptchaEnabled;
+ const authReady=configured && !captchaMisconfigured;
  const notice=configured
-  ? '<p class="card-sub">'+esc(t.intro)+'</p>'
+  ? '<p class="card-sub">'+esc(t.intro)+'</p>'+(
+    captchaMisconfigured?'<div class="notice gold">Проверка безопасности включена, но публичный ключ Turnstile не настроен. Обратись к ответственному владельцу проекта.</div>':''
+   )
   : '<div class="notice gold">Supabase ещё не настроен в этой копии. Сейчас доступны только локальные демонстрационные сценарии.</div>';
  const signupContent=signupEnabled
   ? `
@@ -416,7 +420,7 @@ function loginModal(){
     <div class="field full"><label>${esc(t.email)}</label><input name="email" type="email" autocomplete="email" required></div>
     <div class="field full"><label>${esc(t.password)} (${esc(t.passwordHint)})</label><input name="password" type="password" minlength="8" maxlength="72" autocomplete="new-password" required></div>
     <div class="field full"><label class="lang-hint"><input type="checkbox" name="privacyAck" required> ${esc(t.privacy)}</label></div>
-    <div class="field full"><div id="testerTurnstile" aria-label="${esc(t.captcha)}"></div><small>${esc(t.captcha)}</small></div>
+    <div class="field full"><small>${esc(t.captcha)}</small></div>
     <div class="field full form-actions"><button class="btn" type="submit">${esc(t.signup)}</button></div>
    </form>`
   : '<div class="notice gold">'+esc(t.inviteOnly)+'</div>';
@@ -425,8 +429,8 @@ function loginModal(){
   ${authCaptchaEnabled?'<div class="field full"><div id="authTurnstile" aria-label="'+esc(t.captcha)+'"></div><small>'+esc(t.captcha)+'</small></div>':''}
   <div class="field full"><label>${esc(t.email)}</label><input name="email" type="email" autocomplete="email" required></div>
   <div class="field full"><label>${esc(t.password)}</label><input name="password" type="password" minlength="8" maxlength="72" autocomplete="current-password" required></div>
-  <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>${esc(t.cancel)}</button><button class="btn" type="submit" ${configured?'':'disabled'}>${esc(t.login)}</button></div>
-  <div class="field full"><button class="text-action" type="button" data-password-reset ${configured?'':'disabled'}>${esc(t.forgot)}</button></div>
+  <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>${esc(t.cancel)}</button><button class="btn" type="submit" ${authReady?'':'disabled'}>${esc(t.login)}</button></div>
+  <div class="field full"><button class="text-action" type="button" data-password-reset ${authReady?'':'disabled'}>${esc(t.forgot)}</button></div>
  </form>
  <div class="section-row"><h2>${esc(t.newAccount)}</h2></div>
  ${signupContent}
@@ -659,8 +663,11 @@ document.addEventListener('click',async e=>{
  const email=$('#loginForm input[name="email"]')?.value.trim()||'';
  if(!email){toast('Сначала укажи электронную почту в форме входа.');$('#loginForm input[name="email"]')?.focus();return;}
  try{
-  if(window.YNTYMAK_CONFIG?.enableAuthCaptcha===true&&!testerCaptchaToken){toast('Пройди проверку безопасности перед восстановлением пароля.');return;}\n  await window.YntymakCloud.requestPasswordReset(email,testerCaptchaToken);
-  disposeTesterCaptcha();\n  toast('Если аккаунт с таким адресом существует, письмо для восстановления отправлено.');
+  if(window.YNTYMAK_CONFIG?.enableAuthCaptcha===true&&!testerCaptchaToken){toast('Пройди проверку безопасности перед восстановлением пароля.');return;}
+  await window.YntymakCloud.requestPasswordReset(email,testerCaptchaToken);
+  disposeTesterCaptcha();
+  if(window.YNTYMAK_CONFIG?.enableAuthCaptcha===true)loadTesterCaptcha().catch(()=>{});
+  toast('Если аккаунт с таким адресом существует, письмо для восстановления отправлено.');
  }catch(err){toast(err.message||'Не удалось отправить письмо восстановления.');if(window.YNTYMAK_CONFIG?.enableAuthCaptcha===true){disposeTesterCaptcha();loadTesterCaptcha().catch(()=>{});}}
 });
 window.addEventListener('yntymak:password-recovery',()=>passwordRecoveryModal());
