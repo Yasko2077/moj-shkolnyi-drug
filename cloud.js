@@ -143,12 +143,15 @@
       .select('id,title,description,category,scope,target_label,district_key,first_task,status,created_at,created_by')
       .order('created_at', { ascending: false }).limit(100);
     if (error) throw error;
+    const {data:memberRows,error:memberError}=await c.rpc('get_project_member_counts');
+    if(memberError) throw memberError;
+    const memberCounts=new Map((memberRows||[]).map(x=>[x.project_id,Number(x.member_count)]));
     return (data || []).map(p => ({
       id:p.id, title:p.title, description:p.description, category:p.category,
       scope:p.scope, target:p.target_label, district:p.district_key || '',
       stage:p.status === 'completed' ? 'completed' : p.status === 'published' ? 'active' : 'review',
       owner:p.created_by === session.user.id ? 'Ты' : 'Участник',
-      members:1, created:String(p.created_at).slice(0,10),
+      members:memberCounts.get(p.id)||0, created:String(p.created_at).slice(0,10),
       tasks:[p.first_task], source:'cloud', canManage:p.created_by === session.user.id
     }));
   }
@@ -199,6 +202,14 @@
     const {error}=await c.rpc('withdraw_project_join_request',{p_request_id:requestId});
     if(error) throw error;
     return true;
+  }
+
+  async function getProjectMemberCounts() {
+    const c=getClient();
+    if(!c||!session?.user) throw new Error('Войди в аккаунт.');
+    const {data,error}=await c.rpc('get_project_member_counts');
+    if(error) throw error;
+    return data||[];
   }
 
   async function listProjectJoinRequests(projectId) {
@@ -295,7 +306,7 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, askHostedAI,
+    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, getProjectMemberCounts, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
     initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
