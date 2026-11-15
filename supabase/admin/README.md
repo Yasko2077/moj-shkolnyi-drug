@@ -16,23 +16,25 @@
 
 Этот режим не включает самостоятельную регистрацию для всех посетителей сайта. Для внешних адресов всё равно понадобится настроенная доставка писем через собственный SMTP.
 
-### Режим B — самостоятельная регистрация тестировщиков
+### Режим B — самостоятельная регистрация тестировщиков (открывать только после CAPTCHA)
 
-Если нужен общий доступ по ссылке, взрослый владелец проверяет Supabase Dashboard:
-1. **Authentication → General configuration** → включить **Allow new users to sign up**.
-2. Оставить **Confirm Email** включённым. Не отключать подтверждение почты ради обхода ограничений.
-3. Отключить **Allow anonymous sign-ins**.
-4. В **URL Configuration** задать точный Site URL и разрешённые Redirect URLs для тестового сайта.
-5. Настроить собственный SMTP для писем регистрации, подтверждения и восстановления пароля.
-6. До широкого публичного открытия добавить CAPTCHA-защиту формы регистрации. В Supabase Auth поддерживаются hCaptcha и Cloudflare Turnstile; текущая форма Ынтымак ещё не передаёт `captchaToken`, поэтому нельзя включать обязательную CAPTCHA в Dashboard до отдельной интеграции этого компонента в интерфейс.
+По умолчанию публичная регистрация выключена: в `supabase-config.js` стоят `enableAuthCaptcha: false`, `enableSelfServiceSignup: false`, пустой `turnstileSiteKey`. Поэтому незнакомый посетитель видит режим по приглашениям, а не открытую форму создания аккаунта.
 
-**Ограничение встроенной почты:** hosted Supabase по умолчанию отправляет письма только адресам участников организации; сейчас лимит — 2 письма в час на весь проект, пока используется встроенная почта. Внешние адреса получают отказ. Для тестировщиков из школ подключи custom SMTP и проверь доставку до приглашения группы. См. [общие настройки Auth](https://supabase.com/docs/guides/auth/general-configuration), [проверку Auth-потоков](https://supabase.com/docs/guides/auth/testing-auth-flows), [настройку SMTP](https://supabase.com/docs/guides/auth/auth-smtp) и [CAPTCHA](https://supabase.com/docs/guides/auth/auth-captcha).
+Чтобы включить саморегистрацию, взрослый владелец должен выполнить последовательность:
 
+1. Создать Cloudflare Turnstile widget и добавить точные домены тестового сайта в allowlist. Site Key предназначен для браузера; Secret Key не публиковать.
+2. В Supabase Dashboard открыть Authentication → Bot and Abuse Protection → Enable CAPTCHA protection, выбрать Cloudflare Turnstile и сохранить Secret Key только в настройках Supabase.
+3. В `supabase-config.js` установить публичный `turnstileSiteKey` и `enableAuthCaptcha: true`. Эта интеграция передаёт CAPTCHA token в signup, password sign-in и password reset.
+4. Проверить регистрацию, вход и восстановление пароля на тестовом домене с синтетическими аккаунтами. Если проверка не загружается, не обходить её — оставить саморегистрацию выключенной.
+5. Только после этого установить `enableSelfServiceSignup: true` и в Supabase включить **Allow new users to sign up**. Оставить **Confirm Email** включённым, не включать anonymous sign-ins, проверить точные Site URL и Redirect URLs.
+6. Настроить собственный SMTP для писем регистрации, подтверждения и восстановления пароля, затем проверить доставку на нескольких адресах до приглашения школьной группы.
 
-В коде уже используется `supabase.auth.signUp()`. После подтверждения адреса человек входит с тем же email и паролем; при первом входе создаётся облачный профиль. До подтверждения адреса сессии может не быть — это нормальное поведение Supabase при включённом Confirm Email.
+Secret Key Turnstile хранится только в Supabase Dashboard. В Git допускается только публичный Site Key. Не отключай email confirmation и CAPTCHA ради обхода ограничений.
 
-**Почтовое ограничение:** на hosted Supabase встроенная отправка Auth-писем (пока не настроен custom SMTP) отправляет письма только адресам участников организации и сейчас ограничена двумя письмами в час на весь проект; лимиты могут меняться. Для внешних школьников взрослому владельцу нужно заранее подключить собственный SMTP-провайдер и проверить доставку писем. Не отключай подтверждение email как обход этого ограничения. См. [настройки Auth](https://supabase.com/docs/guides/auth/general-configuration) и [тестирование Auth-потоков](https://supabase.com/docs/guides/auth/testing-auth-flows).
+**Ограничение встроенной почты:** hosted Supabase по умолчанию отправляет письма только адресам участников организации и имеет низкий общий лимит; для внешних школьных адресов взрослому владельцу следует настроить custom SMTP и проверить доставку. См. [общие настройки Auth](https://supabase.com/docs/guides/auth/general-configuration), [тестовые Auth-потоки](https://supabase.com/docs/guides/auth/testing-auth-flows), [SMTP](https://supabase.com/docs/guides/auth/auth-smtp), [CAPTCHA](https://supabase.com/docs/guides/auth/auth-captcha).
 
+В режиме приглашений Supabase Dashboard → Authentication → Users → Add user → Send invitation создаёт обычную учётную запись. После первого входа платформа создаёт профиль тестировщика. CAPTCHA можно включить и для приглашённых логинов; в таком случае должны быть настроены и флаги CAPTCHA, и Turnstile Site Key.
+ 
 ## Нестеров и другие администраторы
 
 Административные полномочия **не назначаются в форме регистрации, профиле, публичном интерфейсе или через пользовательские метаданные**. Их выдаёт только взрослый владелец проекта отдельно в Supabase Dashboard → SQL Editor.
