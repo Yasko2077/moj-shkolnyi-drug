@@ -20,6 +20,7 @@ declare
   v_id uuid;
   v_city_scope boolean := false;
   v_district_scope boolean := false;
+  v_platform_verifier boolean := false;
 begin
   if auth.uid() is null then
     raise exception 'not_authenticated';
@@ -32,6 +33,8 @@ begin
       and a.valid_from <= current_date and a.valid_until >= current_date
   ) into v_city_scope;
 
+  v_platform_verifier := public.is_verification_representative();
+
   if p_scope = 'district' and p_district_key in ('lenin','pervomai','oktyabr','sverdlov') then
     select exists (
       select 1 from public.role_assignments a
@@ -42,15 +45,15 @@ begin
     ) into v_district_scope;
   end if;
 
-  if not v_city_scope and not v_district_scope then
+  if not v_city_scope and not v_district_scope and not (p_scope='city' and v_platform_verifier) then
     raise exception 'event_creation_scope_denied';
   end if;
 
   if p_scope not in ('district','city') then
     raise exception 'school_event_requires_verified_school_scope';
   end if;
-  if p_scope = 'city' and not v_city_scope then
-    raise exception 'city_event_requires_city_role';
+  if p_scope = 'city' and not v_city_scope and not v_platform_verifier then
+    raise exception 'city_event_requires_city_role_or_verified_platform_owner';
   end if;
   if p_scope = 'district' and not (v_city_scope or v_district_scope) then
     raise exception 'district_event_requires_matching_district_role';
@@ -95,4 +98,4 @@ grant execute on function public.create_platform_event(text,text,text,date,text,
   to authenticated;
 
 comment on function public.create_platform_event(text,text,text,date,text,integer,text,text,text) is
-'Creates city or matching-district events only for active verified scope holders. School events and unassigned event-organizer accounts are blocked until explicit ownership mapping exists.';
+'Creates city or matching-district events for active city/district role holders; the trusted platform verifier may create city events only. School events and unassigned event-organizer accounts are blocked until explicit ownership mapping exists.';
