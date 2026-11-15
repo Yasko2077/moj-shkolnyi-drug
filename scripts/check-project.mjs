@@ -345,7 +345,7 @@ check(Boolean(signupMetadata) &&
   'Signup metadata must not accept a client-selected role or administrator flag.');
 check(cloud.includes(".select('display_name,preferred_language,school_id,grade_label,account_type')") &&
   cloud.includes(".select('display_name,preferred_language,school_id,grade_label')") &&
-  cloud.includes("accountType:'tester'"),
+  cloud.includes("accountType:data.account_type||'tester'"),
   'Cloud profile loading must support both current and tester-onboarding schemas while keeping the default unprivileged.');
 
 const authModalStart = app.indexOf('function loginModal(){');
