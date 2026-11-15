@@ -408,6 +408,16 @@
     const {data,error}=await c.rpc('submit_election_candidate',{p_election_id:electionId,p_program:program});
     if(error) throw error; return data;
   }
+  async function listElectionCandidateApplications(electionId) {
+    const c=requireElections(); if(!isAdmin) throw new Error('Очередь заявок доступна только подтверждённому представителю.');
+    const {data,error}=await c.rpc('list_election_candidate_applications',{p_election_id:electionId});
+    if(error) throw error; return data||[];
+  }
+  async function listElectionObjections(electionId) {
+    const c=requireElections(); if(!isAdmin) throw new Error('Очередь возражений доступна только подтверждённому представителю.');
+    const {data,error}=await c.rpc('list_election_objections',{p_election_id:electionId});
+    if(error) throw error; return data||[];
+  }
   async function reviewElectionCandidate(candidateId,decision,note='') {
     const c=requireElections(); if(!isAdmin) throw new Error('Проверка кандидатов доступна только подтверждённому представителю.');
     const {error}=await c.rpc('review_election_candidate',{p_candidate_id:candidateId,p_decision:decision,p_note:note});
@@ -444,7 +454,7 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, getMyProfile, updateMyProfile, checkAdmin, listActiveSchools, assignProfileSchool, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, getProjectMemberCounts, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, listElections, getElectionCandidates, getMyElectionReceipt, createElection, setElectionEligibility, submitElectionCandidate, reviewElectionCandidate, advanceElectionStage, castElectionVote, getElectionResults, submitElectionObjection, reviewElectionObjection, askHostedAI,
+    ensureProfile, getMyProfile, updateMyProfile, checkAdmin, listActiveSchools, assignProfileSchool, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, getProjectMemberCounts, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, listElections, getElectionCandidates, getMyElectionReceipt, createElection, setElectionEligibility, submitElectionCandidate, listElectionCandidateApplications, listElectionObjections, reviewElectionCandidate, advanceElectionStage, castElectionVote, getElectionResults, submitElectionObjection, reviewElectionObjection, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
     initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
