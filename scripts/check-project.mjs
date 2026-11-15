@@ -116,6 +116,10 @@ check(app.includes("kicker:'ЖЕКЕ КАБИНЕТИҢ'") && app.includes("kick
   'The profile screen must have Kyrgyz and Russian labels.');
 check(app.includes('Поле «О себе» осталось только в этом браузере.'),
   'The UI must explain that the bio field is local-only.');
+check(app.includes('name="publicNameConsent"') && app.includes('name="publicProgramConsent"'),
+  'The nomination form must request separate name and program publication consent.');
+check(app.includes("d.get('publicNameConsent')!=='on'||d.get('publicProgramConsent')!=='on'"),
+  'The nomination handler must enforce both publication consents.');
 
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');
 check(matrix.includes('20261115_elections_foundation.sql'),
