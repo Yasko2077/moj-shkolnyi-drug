@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#102b3a">
+  <meta name="description" content="Ынтымак — платформа ученического участия, инициатив и школьных проектов Бишкека.">
+  <title>Ынтымак — платформа учеников Бишкека</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="demo-ribbon"><span class="pulse"></span><span id="environmentLabel">ПИЛОТНЫЙ ПРОТОТИП · ТОЛЬКО ТЕСТОВЫЕ ДАННЫЕ</span><span class="ribbon-place">БИШКЕК · КЫРГЫЗСТАН</span></div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#home" aria-label="Ынтымак — главная">
+        <span class="brand-mark"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3 45 24 24 45 3 24 24 3Z"/><path d="M24 11 37 24 24 37 11 24 24 11Z"/><path d="M3 24h42M24 3v42"/><circle cx="24" cy="24" r="3"/></svg></span>
+        <span class="brand-copy"><strong>Ынтымак</strong><small>БИШКЕК · ОКУУЧУЛАР</small></span>
+      </a>
+      <div class="side-caption">СООБЩЕСТВО</div>
+      <nav class="nav-list" aria-label="Основная навигация">
+        <button class="nav-item active" data-page="home"><span class="nav-ico">⌂</span><span data-i18n="home">Главная</span></button>
+        <button class="nav-item" data-page="ideas"><span class="nav-ico">✳</span><span data-i18n="ideas">Предложения</span><span class="nav-count" id="ideaCount">0</span></button>
+        <button class="nav-item" data-page="elections"><span class="nav-ico">◈</span><span data-i18n="elections">Выборы</span></button>
+        <button class="nav-item" data-page="projects"><span class="nav-ico">↗</span><span data-i18n="projects">Проекты и команды</span></button>
+        <button class="nav-item" data-page="events"><span class="nav-ico">▦</span><span data-i18n="events">Мероприятия</span></button>
+        <button class="nav-item" data-page="surveys"><span class="nav-ico">▤</span><span data-i18n="surveys">Опросы мнения</span></button>
+        <button class="nav-item" data-page="news"><span class="nav-ico">◉</span><span data-i18n="news">Новости и ресурсы</span></button>
+      </nav>
+      <div class="side-caption side-caption-spaced">МОЁ ПРОСТРАНСТВО</div>
+      <nav class="nav-list">
+        <button class="nav-item" data-page="assistant"><span class="nav-ico">✧</span><span data-i18n="assistant">ИИ-помощник</span><span class="nav-ai">AI</span></button>
+        <button class="nav-item" data-page="profile"><span class="nav-ico">◎</span><span data-i18n="profile">Мой профиль</span></button>
+        <button class="nav-item" data-page="help"><span class="nav-ico">♡</span><span data-i18n="help">Помощь и безопасность</span></button>
+        <button class="nav-item admin-nav" id="adminNav" data-page="admin" hidden><span class="nav-ico">▣</span><span data-i18n="admin">Управление</span><span class="nav-lock">●</span></button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-bottom">
+        <a class="city-mini" href="https://edu.e-meria.kg/schools" target="_blank" rel="noopener"><span class="city-seal">Б</span><div><strong>Бишкек</strong><small>Официальный каталог школ ↗</small></div><span class="online-dot"></span></a>
+        <div class="user-mini"><span class="user-avatar" id="sidebarAvatar">ОУ</span><div class="user-mini-copy"><strong id="sidebarName">Гость</strong><small id="sidebarMeta">Тестовый режим</small></div><button class="tiny-button" data-page="profile" aria-label="Профиль">•••</button></div>
+      </div>
+    </aside>
+    <main class="main-area">
+      <header class="topbar">
+        <button class="mobile-menu" id="mobileMenu" aria-label="Открыть меню">☰</button>
+        <div class="top-location"><span>Бишкек</span><b>/</b><strong id="crumb">Главная</strong></div>
+        <div class="top-actions">
+          <div class="mode-pill"><i></i><span id="modeLabel">Демо-данные</span></div>
+          <button class="lang-switch" id="languageBtn" type="button">RU <span>·</span> KG</button>
+          <button class="top-avatar" data-page="profile" id="topAvatar" aria-label="Профиль">ОУ</button>
+          <button class="btn btn-small" id="authButton" type="button">Войти / регистрация</button>
+          <button class="btn btn-small btn-outline" id="signOutButton" type="button" hidden>Выйти</button>
+        </div>
+      </header>
+      <div class="page-wrap"><div id="pageContent" aria-live="polite"></div>
+        <footer class="footer"><span>© 2026 ЫНТЫМАК · БИШКЕК</span><span>Ученическое участие · безопасность · сотрудничество</span></footer>
+      </div>
+    </main>
+  </div>
+  <div id="modalRoot"></div>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./supabase-config.js"></script>
+  <script src="./cloud.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
