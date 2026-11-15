@@ -94,7 +94,7 @@ check(app.includes('Поле «О себе» осталось только в э
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');
 check(matrix.includes('20261115_elections_foundation.sql'),
   'Security matrix must include the elections migration.');
-check(matrix.includes('35. Квитанция не содержит'),
+check(matrix.includes('Квитанция не содержит'),
   'Security matrix must include the voter/ballot separation check.');
 
 if (errors.length) {
