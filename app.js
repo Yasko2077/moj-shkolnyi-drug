@@ -79,6 +79,7 @@ async function loadCloudProfile(){
  try{
   const p=await window.YntymakCloud.getMyProfile();
   if(!p) throw new Error('Профиль аккаунта ещё не создан.');
+  if(['ru','ky'].includes(p.preferredLanguage)) state.lang=p.preferredLanguage==='ky'?'KG':'RU';
   db.profile={...db.profile,name:p.displayName||'Участник',school:p.schoolName||'',district:p.districtKey||'',grade:p.gradeLabel||'',verified:Boolean(p.schoolId),about:''};
   persist();
  }catch(err){
