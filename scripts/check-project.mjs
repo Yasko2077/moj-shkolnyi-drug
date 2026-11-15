@@ -127,8 +127,8 @@ check(eventRegistrationPatch.includes('from public.profiles p') &&
   'Event registration must derive identity and school from trusted profile data.');
 check(eventRegistrationPatch.includes('event_requires_verified_school_in_district'),
   'District event registration must verify the participant school district.');
-check(eventRegistrationPatch.includes("set participant_name=v_display_name") &&
-  eventRegistrationPatch.includes("set status='registered'") === false,
+check(eventRegistrationPatch.includes("participant_name=v_display_name") &&
+  eventRegistrationPatch.includes("where id=v_existing_id"),
   'Event registration should use the server-derived profile name and update cancelled records safely.');
 check(eventRosterPatch.includes('r.organizer_access_consent is true'),
   'Event roster must include only participants who consented to organizer access.');
