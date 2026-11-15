@@ -283,7 +283,7 @@ begin
  where id=p_objection_id;
  insert into public.election_audit_log(election_id,actor_id,action,details)
  values(v_election,auth.uid(),'objection_reviewed',jsonb_build_object('objection_id',p_objection_id,'decision',p_decision));
-end $;
+ end $$;
 
 create or replace function public.get_my_election_receipt(p_election_id uuid)
 returns boolean language sql stable security definer set search_path=public,pg_temp as $$
