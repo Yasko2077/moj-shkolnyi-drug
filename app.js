@@ -235,18 +235,41 @@ function newPoll(){if(!state.realAdmin)return;const body='<div class="notice gol
 function newNews(){if(!state.realAdmin)return;modal('Добавить новость',`<form id="newsForm" class="field-grid"><div class="field full"><label>Заголовок</label><input name="title" maxlength="110" required></div><div class="field full"><label>Текст</label><textarea name="text" minlength="15" maxlength="900" required></textarea></div><div class="field"><label>Категория</label><select name="category"><option>Объявление</option><option>Возможности</option><option>Образование</option><option>Платформа</option></select></div><div class="field"><label>Дата</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}" required></div><div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit">Опубликовать в демо</button></div></form>`);}
 function loginModal(){
  const kg=state.lang==='KG';
- const t=kg?{title:'Кирүү жана катталуу',intro:'Жаңы аккаунт автоматтык түрдө «Сыноочу» макамын алат. Өзүң колдонууга уруксат берилген электрондук почтаны пайдалан. Почтаны ырастоо талап кылынышы мүмкүн.',
-   email:'Электрондук почта',password:'Сырсөз',displayName:'Көрсөтүлүүчү ысым',newAccount:'Жаңы тест аккаунту',
-   privacy:'Бул тесттик версия экенин түшүнөм. Башка окуучулардын жеке маалыматтарын, байланыштарын, документтерин же купуя кайрылууларын киргизбейм.',
-   login:'Кирүү',signup:'Тест аккаунтун түзүү',cancel:'Жабуу',admin:'Администратордук укуктар бул жерде тандалбайт. Аларды долбоордун чоңдорго жооптуу ээси өзүнчө, жабык тартипте дайындайт.'
- }:{title:'Вход и регистрация',intro:'Новый аккаунт автоматически получает статус «Тестировщик». Используй только адрес электронной почты, которым тебе разрешено пользоваться. Подтверждение почты может быть обязательным.',
-   email:'Электронная почта',password:'Пароль',displayName:'Имя для отображения',newAccount:'Новый тестовый аккаунт',
-   privacy:'Я понимаю, что это тестовая версия. Я не буду вводить личные данные других учеников, контакты, документы или чувствительные обращения.',
-   login:'Войти',signup:'Создать аккаунт тестировщика',cancel:'Закрыть',admin:'Администраторские права здесь не выбираются. Их отдельно и закрытым способом назначает взрослый ответственный владелец проекта.'
+ const t=kg?{
+  title:'Кирүү жана катталуу',
+  intro:'Жаңы аккаунт автоматтык түрдө «Сыноочу» макамын алат. Өзүң колдонууга уруксат берилген электрондук почтаны пайдалан. Почтаны ырастоо талап кылынышы мүмкүн.',
+  email:'Электрондук почта',password:'Сырсөз',displayName:'Көрсөтүлүүчү ысым',newAccount:'Жаңы тест аккаунту',
+  privacy:'Бул тесттик версия экенин түшүнөм. Башка окуучулардын жеке маалыматтарын, байланыштарын, документтерин же купуя кайрылууларын киргизбейм.',
+  login:'Кирүү',signup:'Тест аккаунтун түзүү',cancel:'Жабуу',
+  admin:'Администратордук укуктар бул жерде тандалбайт. Аларды долбоордун чоңдорго жооптуу ээси өзүнчө, жабык тартипте дайындайт.'
+ }:{
+  title:'Вход и регистрация',
+  intro:'Новый аккаунт автоматически получает статус «Тестировщик». Используй только адрес электронной почты, которым тебе разрешено пользоваться. Подтверждение почты может быть обязательным.',
+  email:'Электронная почта',password:'Пароль',displayName:'Имя для отображения',newAccount:'Новый тестовый аккаунт',
+  privacy:'Я понимаю, что это тестовая версия. Я не буду вводить личные данные других учеников, контакты, документы или чувствительные обращения.',
+  login:'Войти',signup:'Создать аккаунт тестировщика',cancel:'Закрыть',
+  admin:'Администраторские права здесь не выбираются. Их отдельно и закрытым способом назначает взрослый ответственный владелец проекта.'
  };
  const configured=Boolean(window.YntymakCloud?.configured());
- modal(t.title,`${configured?'<p class="card-sub">'+t.intro+'</p>':'<div class="notice gold">Supabase ещё не настроен в этой копии. Сейчас доступны только локальные демонстрационные сценарии.</div>'}
- +`<form id="loginForm" class="field-grid" style="margin-top:14px"><div class="field full"><label>${t.email}</label><input name="email" type="email" autocomplete="email" required></div><div class="field full"><label>${t.password}</label><input name="password" type="password" minlength="8" autocomplete="current-password" required></div><div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>${t.cancel}</button><button class="btn" type="submit" ${configured?'':'disabled'}>${t.login}</button></div></form><div class="section-row"><h2>${t.newAccount}</h2></div><form id="signupForm" class="field-grid"><div class="field full"><label>${t.displayName}</label><input name="displayName" maxlength="70" required></div><div class="field full"><label>${t.email}</label><input name="email" type="email" autocomplete="email" required></div><div class="field full"><label>${t.password} (минимум 8 символов)</label><input name="password" type="password" minlength="8" autocomplete="new-password" required></div><div class="field full"><label class="lang-hint"><input type="checkbox" name="privacyAck" required> ${t.privacy}</label></div><div class="field full form-actions"><button class="btn" type="submit" ${configured?'':'disabled'}>${t.signup}</button></div></form><p class="lang-hint">${t.admin}</p>`);
+ const notice=configured
+  ? '<p class="card-sub">'+esc(t.intro)+'</p>'
+  : '<div class="notice gold">Supabase ещё не настроен в этой копии. Сейчас доступны только локальные демонстрационные сценарии.</div>';
+ const body=notice+`
+ <form id="loginForm" class="field-grid" style="margin-top:14px">
+  <div class="field full"><label>${esc(t.email)}</label><input name="email" type="email" autocomplete="email" required></div>
+  <div class="field full"><label>${esc(t.password)}</label><input name="password" type="password" minlength="8" autocomplete="current-password" required></div>
+  <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>${esc(t.cancel)}</button><button class="btn" type="submit" ${configured?'':'disabled'}>${esc(t.login)}</button></div>
+ </form>
+ <div class="section-row"><h2>${esc(t.newAccount)}</h2></div>
+ <form id="signupForm" class="field-grid">
+  <div class="field full"><label>${esc(t.displayName)}</label><input name="displayName" maxlength="70" required></div>
+  <div class="field full"><label>${esc(t.email)}</label><input name="email" type="email" autocomplete="email" required></div>
+  <div class="field full"><label>${esc(t.password)} (minimum 8)</label><input name="password" type="password" minlength="8" autocomplete="new-password" required></div>
+  <div class="field full"><label class="lang-hint"><input type="checkbox" name="privacyAck" required> ${esc(t.privacy)}</label></div>
+  <div class="field full form-actions"><button class="btn" type="submit" ${configured?'':'disabled'}>${esc(t.signup)}</button></div>
+ </form>
+ <p class="lang-hint">${esc(t.admin)}</p>`;
+ modal(t.title,body);
 }
 function viewElection(id){const e=db.elections.find(x=>x.id===id);if(!e)return;const approved=e.candidates.filter(c=>c.status==='approved');const mine=e.myVote;modal(e.title,`<div class="card-topline">${tag(scopeLabel(e.scope),'blue')}${tag(statusName(e.stage),'gold')}</div><p class="card-sub">${esc(e.description)}</p><div class="meta-line">${esc(e.target)} · ${esc(e.position)}</div><div class="metric-line"><span>Период голосования</span><strong>${dateLabel(e.votingStart)} — ${dateLabel(e.votingEnd)}</strong></div><div class="section-row"><h2>Кандидаты</h2>${e.stage==='nominations'?btn('Подать бесплатную заявку','data-nominate="'+esc(e.id)+'"','btn-small'):''}</div>${approved.map(c=>`<div class="admin-record"><span class="user-avatar">${esc(initials(c.name))}</span><div class="admin-record-copy"><strong>${esc(c.name)}</strong><small>${esc(c.program)}</small></div>${e.stage==='voting'&&!mine?btn('Голосовать','data-cast-vote="'+esc(e.id)+'" data-candidate="'+esc(c.id)+'"','btn-small'):''}</div>`).join('')||'<div class="empty-state">Кандидаты ещё не прошли допуск.</div>'}${mine?'<div class="notice">В этом браузере уже сохранён тестовый голос.</div>':''}<div class="notice gold" style="margin-top:13px">Это локальный тест. Он не гарантирует тайну голоса, уникальность личности или официальную проверку результата. Для настоящего голосования нужна отдельная серверная система.</div>${e.stage==='closed'?`<div class="section-row"><h2>Результаты демо</h2></div>${approved.map(c=>`<div class="metric-line"><span>${esc(c.name)}</span><strong>${c.votes||0}</strong></div>`).join('')}`:''}`);}
 function nominate(id){
