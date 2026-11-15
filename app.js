@@ -340,44 +340,97 @@ function newEvent(){if(!state.realAdmin){toast('Создание меропри�
 
 function newPoll(){if(!state.realAdmin)return;const body='<div class="notice gold">Неофициальный опрос мнения. Не спрашивай персональные или чувствительные сведения.</div><form id="pollForm" class="field-grid"><div class="field full"><label>Вопрос</label><input name="title" minlength="5" maxlength="120" required></div><div class="field full"><label>Пояснение</label><textarea name="description" maxlength="500"></textarea></div><div class="field full"><label>Вариант 1</label><input name="option1" maxlength="100" required></div><div class="field full"><label>Вариант 2</label><input name="option2" maxlength="100" required></div><div class="field full"><label>Вариант 3 (необязательно)</label><input name="option3" maxlength="100"></div><div class="field full"><label>Вариант 4 (необязательно)</label><input name="option4" maxlength="100"></div><div class="field"><label>Дата завершения</label><input name="closesAt" type="date"></div><div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit">Создать опрос</button></div></form>';modal('Создать опрос мнения',body);}
 function newNews(){if(!state.realAdmin)return;modal('Добавить новость',`<form id="newsForm" class="field-grid"><div class="field full"><label>Заголовок</label><input name="title" maxlength="110" required></div><div class="field full"><label>Текст</label><textarea name="text" minlength="15" maxlength="900" required></textarea></div><div class="field"><label>Категория</label><select name="category"><option>Объявление</option><option>Возможности</option><option>Образование</option><option>Платформа</option></select></div><div class="field"><label>Дата</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}" required></div><div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit">Опубликовать в демо</button></div></form>`);}
+let testerCaptchaToken = '';
+let testerTurnstileWidgetId = null;
+let testerTurnstileLoadPromise = null;
+
+function disposeTesterCaptcha(){
+ if(window.turnstile && testerTurnstileWidgetId!==null){
+  try{window.turnstile.remove(testerTurnstileWidgetId);}catch(_error){}
+ }
+ testerTurnstileWidgetId=null;
+ testerCaptchaToken='';
+}
+function mountTesterCaptcha(){
+ const siteKey=String(window.YNTYMAK_CONFIG?.turnstileSiteKey||'').trim();
+ const host=document.getElementById('testerTurnstile');
+ if(!siteKey||!host||!window.turnstile?.render)return;
+ disposeTesterCaptcha();
+ testerTurnstileWidgetId=window.turnstile.render(host,{
+  sitekey:siteKey,
+  callback(token){testerCaptchaToken=String(token||'');},
+  'expired-callback'(){testerCaptchaToken='';},
+  'error-callback'(){testerCaptchaToken='';}
+ });
+}
+function loadTesterCaptcha(){
+ const siteKey=String(window.YNTYMAK_CONFIG?.turnstileSiteKey||'').trim();
+ if(!siteKey||!document.getElementById('testerTurnstile'))return;
+ if(window.turnstile){mountTesterCaptcha();return;}
+ if(testerTurnstileLoadPromise)return;
+ testerTurnstileLoadPromise=new Promise((resolve,reject)=>{
+  const script=document.createElement('script');
+  script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+  script.async=true;
+  script.defer=true;
+  script.onload=()=>{mountTesterCaptcha();resolve();};
+  script.onerror=()=>{testerTurnstileLoadPromise=null;reject(new Error('Не удалось загрузить проверку безопасности.'));};
+  document.head.appendChild(script);
+ });
+}
+
 function loginModal(){
+ disposeTesterCaptcha();
  const kg=state.lang==='KG';
  const t=kg?{
   title:'Кирүү жана катталуу',
-  intro:'Жаңы аккаунт автоматтык түрдө «Сыноочу» макамын алат. Өзүң колдонууга уруксат берилген электрондук почтаны пайдалан. Почтаны ырастоо талап кылынышы мүмкүн.',
-  email:'Электрондук почта',password:'Сырсөз',displayName:'Көрсөтүлүүчү ысым',newAccount:'Жаңы тест аккаунту',
+  intro:'Аккаунтка кирүү үчүн электрондук почтаңды жана сырсөзүңдү колдон. Жаңы аккаунт дайыма «Сыноочу» макамын алат.',
+  email:'Электрондук почта',password:'Сырсөз',displayName:'Көрсөтүлүүчү ысым',newAccount:'Тест аккаунту',
   privacy:'Бул тесттик версия экенин түшүнөм. Башка окуучулардын жеке маалыматтарын, байланыштарын, документтерин же купуя кайрылууларын киргизбейм.',
   login:'Кирүү',signup:'Тест аккаунтун түзүү',forgot:'Сырсөздү унуттуңбу?',cancel:'Жабуу',passwordHint:'кеминде 8 белги',
-  admin:'Администратордук укуктар бул жерде тандалбайт. Аларды долбоордун чоңдорго жооптуу ээси өзүнчө, жабык тартипте дайындайт.'
+  inviteOnly:'Өз алдынча катталуу азырынча жабык. Уюштуруучудан жеке чакыруу ал. Чакырууну ырастап, ушул жерден кирсең, система сага «Сыноочу» профилин түзөт.',
+  captcha:'Катталууну ачуу үчүн коопсуздук текшерүүсүн бүтүр.',
+  admin:'Администратордук укуктар бул жерде тандалбайт. Аларды чоңдорго жооптуу ээси өзүнчө жана жабык тартипте дайындайт.'
  }:{
   title:'Вход и регистрация',
-  intro:'Новый аккаунт автоматически получает статус «Тестировщик». Используй только адрес электронной почты, которым тебе разрешено пользоваться. Подтверждение почты может быть обязательным.',
-  email:'Электронная почта',password:'Пароль',displayName:'Имя для отображения',newAccount:'Новый тестовый аккаунт',
+  intro:'Войди с помощью электронной почты и пароля. Каждый новый аккаунт получает только статус «Тестировщик».',
+  email:'Электронная почта',password:'Пароль',displayName:'Имя для отображения',newAccount:'Аккаунт тестировщика',
   privacy:'Я понимаю, что это тестовая версия. Я не буду вводить личные данные других учеников, контакты, документы или чувствительные обращения.',
   login:'Войти',signup:'Создать аккаунт тестировщика',forgot:'Забыли пароль?',cancel:'Закрыть',passwordHint:'минимум 8 символов',
+  inviteOnly:'Самостоятельная регистрация пока закрыта. Получи персональное приглашение у организатора. После подтверждения приглашения войди здесь — система создаст профиль тестировщика.',
+  captcha:'Пройди проверку безопасности, чтобы создать аккаунт.',
   admin:'Администраторские права здесь не выбираются. Их отдельно и закрытым способом назначает взрослый ответственный владелец проекта.'
  };
  const configured=Boolean(window.YntymakCloud?.configured());
+ const signupEnabled=configured &&
+  window.YNTYMAK_CONFIG?.enableSelfServiceSignup===true &&
+  Boolean(String(window.YNTYMAK_CONFIG?.turnstileSiteKey||'').trim());
  const notice=configured
   ? '<p class="card-sub">'+esc(t.intro)+'</p>'
   : '<div class="notice gold">Supabase ещё не настроен в этой копии. Сейчас доступны только локальные демонстрационные сценарии.</div>';
+ const signupContent=signupEnabled
+  ? `
+   <form id="signupForm" class="field-grid">
+    <div class="field full"><label>${esc(t.displayName)}</label><input name="displayName" maxlength="70" required></div>
+    <div class="field full"><label>${esc(t.email)}</label><input name="email" type="email" autocomplete="email" required></div>
+    <div class="field full"><label>${esc(t.password)} (${esc(t.passwordHint)})</label><input name="password" type="password" minlength="8" maxlength="72" autocomplete="new-password" required></div>
+    <div class="field full"><label class="lang-hint"><input type="checkbox" name="privacyAck" required> ${esc(t.privacy)}</label></div>
+    <div class="field full"><div id="testerTurnstile" aria-label="${esc(t.captcha)}"></div><small>${esc(t.captcha)}</small></div>
+    <div class="field full form-actions"><button class="btn" type="submit">${esc(t.signup)}</button></div>
+   </form>`
+  : '<div class="notice gold">'+esc(t.inviteOnly)+'</div>';
  const body=notice+`
  <form id="loginForm" class="field-grid" style="margin-top:14px">
   <div class="field full"><label>${esc(t.email)}</label><input name="email" type="email" autocomplete="email" required></div>
-  <div class="field full"><label>${esc(t.password)}</label><input name="password" type="password" minlength="8" autocomplete="current-password" required></div>
+  <div class="field full"><label>${esc(t.password)}</label><input name="password" type="password" minlength="8" maxlength="72" autocomplete="current-password" required></div>
   <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>${esc(t.cancel)}</button><button class="btn" type="submit" ${configured?'':'disabled'}>${esc(t.login)}</button></div>
   <div class="field full"><button class="text-action" type="button" data-password-reset ${configured?'':'disabled'}>${esc(t.forgot)}</button></div>
  </form>
  <div class="section-row"><h2>${esc(t.newAccount)}</h2></div>
- <form id="signupForm" class="field-grid">
-  <div class="field full"><label>${esc(t.displayName)}</label><input name="displayName" maxlength="70" required></div>
-  <div class="field full"><label>${esc(t.email)}</label><input name="email" type="email" autocomplete="email" required></div>
-  <div class="field full"><label>${esc(t.password)} (${esc(t.passwordHint)})</label><input name="password" type="password" minlength="8" autocomplete="new-password" required></div>
-  <div class="field full"><label class="lang-hint"><input type="checkbox" name="privacyAck" required> ${esc(t.privacy)}</label></div>
-  <div class="field full form-actions"><button class="btn" type="submit" ${configured?'':'disabled'}>${esc(t.signup)}</button></div>
- </form>
+ ${signupContent}
  <p class="lang-hint">${esc(t.admin)}</p>`;
  modal(t.title,body);
+ if(signupEnabled)loadTesterCaptcha().catch(error=>toast(error.message));
 }
 function passwordRecoveryModal(){
  const kg=state.lang==='KG';
@@ -557,7 +610,30 @@ document.addEventListener('submit',async e=>{
   return;
  }
  if(f.id==='loginForm'){e.preventDefault();const d=new FormData(f);try{const result=await window.YntymakCloud.signIn({email:d.get('email').trim(),password:d.get('password')});state.admin=result.isAdmin;state.realAdmin=result.isAdmin;try{await loadCloudProfile();}catch(profileError){console.warn('Cloud profile could not be loaded:',profileError.message);}closeModal();render();toast(result.isAdmin?'Вход выполнен. Подтверждены полномочия администратора.':'Вход выполнен. Добро пожаловать, тестировщик!');}catch(err){toast(err.message||'Не удалось войти.');}}
- if(f.id==='signupForm'){e.preventDefault();const d=new FormData(f);if(!window.YntymakCloud?.configured()){toast('Сначала настрой Supabase Auth.');return;}try{const result=await window.YntymakCloud.signUp({email:d.get('email').trim(),password:d.get('password'),displayName:d.get('displayName').trim(),language:langCode()});state.admin=Boolean(result.isAdmin);state.realAdmin=Boolean(result.isAdmin);if(window.YntymakCloud?.getSession()){try{await loadCloudProfile();}catch(profileError){console.warn('Cloud profile could not be loaded:',profileError.message);}}closeModal();toast(result.emailConfirmationRequired?'Письмо отправлено. Подтверди адрес, затем войди — профиль получит статус тестировщика.':'Аккаунт тестировщика создан. Профиль подготовлен.');}catch(err){toast(err.message||'Не удалось зарегистрироваться.');}}
+ if(f.id==='signupForm'){
+  e.preventDefault();
+  const d=new FormData(f);
+  if(!window.YntymakCloud?.configured()){toast('Сначала настрой Supabase Auth.');return;}
+  if(!testerCaptchaToken){toast('Пройди проверку безопасности перед регистрацией.');return;}
+  try{
+   const result=await window.YntymakCloud.signUp({
+    email:d.get('email').trim(),password:d.get('password'),
+    displayName:d.get('displayName').trim(),language:langCode(),
+    captchaToken:testerCaptchaToken
+   });
+   state.admin=Boolean(result.isAdmin);state.realAdmin=Boolean(result.isAdmin);
+   if(window.YntymakCloud?.getSession()){
+    try{await loadCloudProfile();}catch(profileError){console.warn('Cloud profile could not be loaded:',profileError.message);}
+   }
+   disposeTesterCaptcha();
+   closeModal();
+   toast(result.emailConfirmationRequired?'Письмо отправлено. Подтверди адрес, затем войди — профиль получит статус тестировщика.':'Аккаунт тестировщика создан. Профиль подготовлен.');
+  }catch(err){
+   disposeTesterCaptcha();
+   toast(err.message||'Не удалось зарегистрироваться.');
+   if(document.getElementById('signupForm'))loadTesterCaptcha().catch(()=>{});
+  }
+ }
 });
 document.addEventListener('click',async e=>{
  const reset=e.target.closest('[data-password-reset]');
