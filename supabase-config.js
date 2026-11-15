@@ -3,5 +3,6 @@ window.YNTYMAK_CONFIG = {
   supabaseUrl: "https://suutpjjcendapzpebkcp.supabase.co",
   supabasePublishableKey: "",
   enableHostedAI: false,
-  enableCloudInitiatives: false
+  enableCloudInitiatives: false,
+  enableCloudProjects: false
 };
