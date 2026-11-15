@@ -88,16 +88,13 @@ with check (
   and exists(select 1 from public.student_projects p where p.id=project_id and p.status='published')
 );
 
+-- Request state changes must pass through the SECURITY DEFINER review/withdraw RPCs.
+-- Direct table UPDATE could mark a request accepted without creating membership.
 drop policy if exists project_join_requests_update_owner_or_self on public.project_join_requests;
 drop policy if exists project_join_requests_withdraw_self on public.project_join_requests;
-create policy project_join_requests_withdraw_self on public.project_join_requests for update to authenticated
-using (user_id=(select auth.uid()) and status='pending')
-with check (user_id=(select auth.uid()) and status='withdrawn');
-
 drop policy if exists project_join_requests_review_owner on public.project_join_requests;
-create policy project_join_requests_review_owner on public.project_join_requests for update to authenticated
-using (exists(select 1 from public.student_projects p where p.id=project_id and p.created_by=(select auth.uid())))
-with check (exists(select 1 from public.student_projects p where p.id=project_id and p.created_by=(select auth.uid())));
+revoke update on public.project_join_requests from anon, authenticated;
+revoke update(status,updated_at) on public.project_join_requests from anon, authenticated;
 
 revoke all on public.student_projects, public.project_tasks, public.project_join_requests from anon, authenticated;
 grant select on public.student_projects, public.project_tasks, public.project_join_requests to authenticated;
@@ -107,7 +104,6 @@ grant update(status,updated_at) on public.student_projects to authenticated;
 grant insert(project_id,title,sort_order,is_done) on public.project_tasks to authenticated;
 grant update(title,sort_order,is_done) on public.project_tasks to authenticated;
 grant insert(project_id,user_id,message,status) on public.project_join_requests to authenticated;
-grant update(status,updated_at) on public.project_join_requests to authenticated;
 
 comment on table public.student_projects is 'Student project proposals; moderated before publication.';
 comment on table public.project_tasks is 'Simple task list managed by project owner.';
