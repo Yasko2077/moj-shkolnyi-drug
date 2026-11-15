@@ -106,7 +106,7 @@ revoke all on public.elections,public.election_candidates,public.election_eligib
  public.election_voter_receipts,public.election_ballots,public.election_audit_log,
  public.election_objections from anon,authenticated;
 
-grant select on public.elections,public.election_candidates to authenticated;
+grant select on public.elections to authenticated;
 
 drop policy if exists elections_public_read on public.elections;
 create policy elections_public_read on public.elections for select to authenticated
