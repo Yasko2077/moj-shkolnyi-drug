@@ -20,6 +20,15 @@ begin
     raise exception 'scoped_event_roster_rpc_missing_or_not_granted';
   end if;
 
+  if to_regprocedure('public.register_for_event(uuid,boolean)') is null
+     or not has_function_privilege('authenticated',to_regprocedure('public.register_for_event(uuid,boolean)'),'EXECUTE') then
+    raise exception 'consent_registration_rpc_missing_or_not_granted';
+  end if;
+  if to_regprocedure('public.register_for_event(uuid,text,text,text,text,text)') is not null
+     and has_function_privilege('authenticated',to_regprocedure('public.register_for_event(uuid,text,text,text,text,text)'),'EXECUTE') then
+    raise exception 'legacy_unconsented_registration_rpc_still_executable';
+  end if;
+
   if to_regclass('public.news_posts') is null
      or has_column_privilege('authenticated','public.news_posts','title','INSERT')
      or has_column_privilege('authenticated','public.news_posts','is_published','UPDATE') then
