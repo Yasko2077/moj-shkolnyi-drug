@@ -57,11 +57,17 @@
     }
     return { configured: true, session, isAdmin };
   }
-  async function signUp({ email, password, displayName, language = 'ru' }) {
+  async function signUp({ email, password, displayName, language = 'ru', captchaToken = '' }) {
     const c = getClient(); if (!c) throw new Error('Подключение Supabase ещё не настроено.');
+    if (cfg.enableSelfServiceSignup !== true) {
+      throw new Error('Самостоятельная регистрация пока закрыта. Попроси организатора прислать персональное приглашение.');
+    }
+    if (!String(cfg.turnstileSiteKey || '').trim() || !String(captchaToken || '').trim()) {
+      throw new Error('Пройди проверку безопасности перед созданием аккаунта.');
+    }
     const { data, error } = await c.auth.signUp({
       email, password,
-      options: { data: { display_name: displayName, preferred_language: language }, emailRedirectTo: `${location.origin}${location.pathname}` }
+      options: { data: { display_name: displayName, preferred_language: language }, emailRedirectTo: `${location.origin}${location.pathname}`, captchaToken }
     });
     if (error) throw error;
     session = data.session || null; authUser = data.user || null;
