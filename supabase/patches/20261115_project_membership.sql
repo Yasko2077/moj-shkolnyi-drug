@@ -12,16 +12,7 @@ create index if not exists student_project_members_project_idx
 
 alter table public.student_project_members enable row level security;
 drop policy if exists student_project_members_read_private on public.student_project_members;
-create policy student_project_members_read_private
-on public.student_project_members for select to authenticated
-using (
-  user_id=(select auth.uid())
-  or exists(select 1 from public.student_projects p
-    where p.id=project_id and p.created_by=(select auth.uid()))
-);
-
 revoke all on public.student_project_members from public, anon, authenticated;
-grant select on public.student_project_members to authenticated;
 
 -- Existing project owners become the first member; new owners are added automatically.
 insert into public.student_project_members(project_id,user_id)
@@ -39,6 +30,7 @@ begin
 end;
 $$;
 drop trigger if exists student_project_owner_membership on public.student_projects;
+revoke all on function public.add_project_owner_as_member() from public,anon,authenticated;
 create trigger student_project_owner_membership
 after insert on public.student_projects
 for each row execute function public.add_project_owner_as_member();
@@ -96,4 +88,4 @@ revoke all on function public.get_project_member_counts() from public,anon;
 grant execute on function public.get_project_member_counts() to authenticated;
 
 comment on table public.student_project_members is
-'Private project membership identities; clients receive only aggregate member counts except project owners may read membership rows.';
+'Private project membership identities; clients receive only aggregate member counts; individual membership identities are not directly readable.';
