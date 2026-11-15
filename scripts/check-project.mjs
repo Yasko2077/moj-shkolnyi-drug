@@ -103,6 +103,18 @@ for (const indexName of [
   check(indexPatch.includes(indexName), `Missing baseline foreign-key index: ${indexName}`);
 }
 
+const eventCreatorPatch = read('supabase/patches/20261115_event_creator_scope.sql');
+const eventRosterPatch = read('supabase/patches/20261115_event_roster_scope.sql');
+check(eventCreatorPatch.includes('v_platform_verifier := public.is_verification_representative();') &&
+  eventCreatorPatch.includes("p_scope='city' and v_platform_verifier"),
+  'Verified platform representative must be restricted to creating city events.');
+check(eventRosterPatch.includes('v_own_event := v_event.created_by = auth.uid();') &&
+  eventRosterPatch.includes('if not v_own_event and not v_city_scope'),
+  'Platform verifier must only read the roster of events they created.');
+check(eventCreatorPatch.includes('revoke all on function public.create_platform_event') &&
+  eventRosterPatch.includes('revoke all on function public.get_event_roster(uuid)'),
+  'Event creation and roster functions must revoke public/anonymous access.');
+
 const profilePatch = read('supabase/patches/20261115_profile_school_integrity.sql');
 check(profilePatch.includes('grant update(display_name, preferred_language, grade_label) on public.profiles'),
   'Profile self-update must be restricted to display name, language, and grade.');
