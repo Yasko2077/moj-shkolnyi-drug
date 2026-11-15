@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - foundation/yntymak-0.9.1
+      - test/yntymak-supabase-audit
   pull_request:
     branches:
       - main
