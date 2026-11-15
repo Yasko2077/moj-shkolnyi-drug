@@ -21,6 +21,7 @@ declare
   v_event public.events%rowtype;
   v_city_scope boolean;
   v_district_scope boolean;
+  v_own_event boolean;
 begin
   if auth.uid() is null then raise exception 'not_authenticated'; end if;
 
@@ -29,6 +30,8 @@ begin
   where e.id = p_event_id;
 
   if not found then raise exception 'event_not_found'; end if;
+
+  v_own_event := v_event.created_by = auth.uid();
 
   select exists (
     select 1 from public.role_assignments a
@@ -45,7 +48,7 @@ begin
       and a.valid_from <= current_date and a.valid_until >= current_date
   ) into v_district_scope;
 
-  if not v_city_scope and not (v_event.scope = 'district' and v_district_scope) then
+  if not v_own_event and not v_city_scope and not (v_event.scope = 'district' and v_district_scope) then
     raise exception 'roster_access_denied';
   end if;
 
@@ -62,4 +65,4 @@ revoke all on function public.get_event_roster(uuid) from public, anon;
 grant execute on function public.get_event_roster(uuid) to authenticated;
 
 comment on function public.get_event_roster(uuid) is
-'Returns participant roster for one exact event only to active city-level representatives or the matching district chair. School-level access remains disabled pending verified event-school ownership.';
+'Returns participant roster for one exact event only to its creator, active city-level representatives or the matching district chair. The trusted platform verifier can view only events they created unless they also hold an active city/district role. School-level access remains disabled pending verified event-school ownership.';
