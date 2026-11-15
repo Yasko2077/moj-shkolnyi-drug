@@ -42,11 +42,17 @@ create table if not exists public.election_candidates (
   reviewed_by uuid references auth.users(id) on delete restrict,
   reviewed_at timestamptz,
   reviewer_note text check (reviewer_note is null or char_length(reviewer_note)<=500),
+  public_name_consent boolean not null default false,
+  public_program_consent boolean not null default false,
+  public_consent_at timestamptz,
   unique(election_id,user_id),
   unique(id,election_id)
 );
 create index if not exists election_candidates_public_idx
   on public.election_candidates(election_id,status,submitted_at);
+alter table public.election_candidates add column if not exists public_name_consent boolean not null default false;
+alter table public.election_candidates add column if not exists public_program_consent boolean not null default false;
+alter table public.election_candidates add column if not exists public_consent_at timestamptz;
 
 -- Eligibility is deliberately private and is not inferred from client-supplied school/grade text.
 create table if not exists public.election_eligibility (
@@ -178,20 +184,31 @@ begin
  return v_count;
 end $function$;
 
-create or replace function public.submit_election_candidate(p_election_id uuid,p_program text)
+drop function if exists public.submit_election_candidate(uuid,text);
+
+create or replace function public.submit_election_candidate(
+ p_election_id uuid,p_program text,p_public_name_consent boolean,p_public_program_consent boolean
+)
 returns uuid language plpgsql security definer set search_path=public,pg_temp as '
 declare v_id uuid; v_e public.elections%rowtype; v_school uuid; v_display_name text;
 begin
  if auth.uid() is null then raise exception ''not_authenticated''; end if;
+ if p_public_name_consent is distinct from true or p_public_program_consent is distinct from true then
+  raise exception ''candidate_publication_consent_required'';
+ end if;
  select * into v_e from public.elections where id=p_election_id for update;
  if not found or v_e.stage<>''nominations'' or now()<v_e.nominations_open_at or now()>=v_e.nominations_close_at then raise exception ''nominations_closed''; end if;
  select school_id,display_name into v_school,v_display_name from public.profiles where id=auth.uid();
  if v_e.scope=''school'' and v_school is distinct from v_e.school_id then raise exception ''candidate_school_mismatch''; end if;
  if v_e.scope=''district'' and not exists(select 1 from public.schools s where s.id=v_school and s.district_key=v_e.district_key) then raise exception ''candidate_district_mismatch''; end if;
  if not exists(select 1 from public.election_eligibility where election_id=p_election_id and user_id=auth.uid()) then raise exception ''candidate_not_eligible''; end if;
- insert into public.election_candidates(election_id,user_id,display_name,program)
- values(p_election_id,auth.uid(),v_display_name,trim(p_program)) returning id into v_id;
- insert into public.election_audit_log(election_id,actor_id,action) values(p_election_id,auth.uid(),''candidate_submitted'');
+ insert into public.election_candidates(
+  election_id,user_id,display_name,program,public_name_consent,public_program_consent,public_consent_at
+ ) values(
+  p_election_id,auth.uid(),v_display_name,trim(p_program),true,true,now()
+ ) returning id into v_id;
+ insert into public.election_audit_log(election_id,actor_id,action)
+ values(p_election_id,auth.uid(),''candidate_submitted'');
  return v_id;
 end;
 ';
@@ -331,7 +348,7 @@ returns table(id uuid,display_name text,program text,status text)
 language sql stable security definer set search_path=public,pg_temp as $function$
  select c.id,c.display_name,c.program,c.status from public.election_candidates c
  join public.elections e on e.id=c.election_id
- where c.election_id=p_election_id and c.status='approved'
+ where c.election_id=p_election_id and c.status='approved' and c.public_name_consent and c.public_program_consent and c.public_consent_at is not null
  and e.stage in ('nominations','review','campaign','voting','counting','objections','certified')
  and auth.uid() is not null
  order by c.submitted_at
@@ -339,7 +356,7 @@ $function$;
 
 revoke all on function public.create_election(text,text,text,text,uuid,text,text,timestamptz,timestamptz,timestamptz,timestamptz,timestamptz) from public,anon;
 revoke all on function public.set_election_eligibility(uuid,uuid[]) from public,anon;
-revoke all on function public.submit_election_candidate(uuid,text) from public,anon;
+revoke all on function public.submit_election_candidate(uuid,text,boolean,boolean) from public,anon;
 revoke all on function public.review_election_candidate(uuid,text,text) from public,anon;
 revoke all on function public.advance_election_stage(uuid,text,text) from public,anon;
 revoke all on function public.cast_election_vote(uuid,uuid) from public,anon;
@@ -352,7 +369,7 @@ revoke all on function public.get_my_election_receipt(uuid) from public,anon;
 revoke all on function public.get_election_public_candidates(uuid) from public,anon;
 grant execute on function public.create_election(text,text,text,text,uuid,text,text,timestamptz,timestamptz,timestamptz,timestamptz,timestamptz) to authenticated;
 grant execute on function public.set_election_eligibility(uuid,uuid[]) to authenticated;
-grant execute on function public.submit_election_candidate(uuid,text) to authenticated;
+grant execute on function public.submit_election_candidate(uuid,text,boolean,boolean) to authenticated;
 grant execute on function public.review_election_candidate(uuid,text,text) to authenticated;
 grant execute on function public.advance_election_stage(uuid,text,text) to authenticated;
 grant execute on function public.cast_election_vote(uuid,uuid) to authenticated;
@@ -367,3 +384,4 @@ grant execute on function public.get_election_public_candidates(uuid) to authent
 comment on table public.election_voter_receipts is 'Private one-account-one-vote receipts. Never expose to clients.';
 comment on table public.election_ballots is 'Ballots contain no voter user_id. Access only through aggregate results RPC.';
 comment on table public.election_eligibility is 'Private eligibility register; populated only by verified representative.';
+comment on column public.election_candidates.public_consent_at is 'Timestamp of the participant''s explicit consent to public display of name and program.';
