@@ -75,7 +75,7 @@ try {
     YNTYMAK_SUPABASE_URL: "https://stage-project.supabase.co",
     YNTYMAK_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_only",
     YNTYMAK_ENABLE_AUTH_CAPTCHA: "true"
-  }, false, "YNTYMAK_TURNSTILE_SITE_KEY is required");
+  }, false, "Auth CAPTCHA requires a separate staging Supabase project");
 
   runBuild("staging Auth with CAPTCHA", {
     YNTYMAK_SUPABASE_URL: "https://stage-project.supabase.co",
