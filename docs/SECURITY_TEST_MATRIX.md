@@ -138,3 +138,11 @@
 ## Состояние на момент подготовки
 
 Новые изменения проверены SQL-транзакциями с `ROLLBACK`: проектная лаборатория вместе с RPC обработки заявок, новости/опросы вместе с блокировкой прямой записи вариантов, ограничения профиля, квота ИИ, назначение школы и фундамент выборов. `app.js` и `cloud.js` прошли синтаксическую проверку. Рабочая Supabase-схема не изменялась, облачные функции остаются выключенными. Эти проверки подтверждают синтаксис и отсутствие немедленной ошибки применения, но не заменяют интеграционные тесты с отдельными ролями.
+
+### Дополнительные проверки прав по столбцам (после hardening-патчей)
+
+49. `has_column_privilege('authenticated','public.event_registrations','user_id','INSERT')` и аналогичные проверки для полей регистрации возвращают `false`; прямой INSERT запрещён независимо от ранее выданных column-level grants.
+50. `has_column_privilege('authenticated','public.news_posts','title','INSERT')` и `has_column_privilege('authenticated','public.news_posts','is_published','UPDATE')` возвращают `false`; запись выполняется только через `publish_news_post()`.
+51. `has_column_privilege('authenticated','public.poll_options','label','INSERT')` и `...,'UPDATE'` возвращают `false`; варианты создаются только через `create_community_poll()`.
+52. Для `profiles` UPDATE разрешён только полям `display_name`, `preferred_language`, `grade_label`; UPDATE `school_id`, `id`, `created_at`, `updated_at` запрещён.
+53. До установки `get_event_roster(uuid)` вызов старой `get_event_roster(text)` отклоняется; после установки UUID-версии проверяется собственник мероприятия и соответствующая активная территориальная роль.
