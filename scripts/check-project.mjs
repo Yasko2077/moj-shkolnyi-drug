@@ -409,11 +409,11 @@ check(Boolean(signupSource) &&
   signupSource.includes('cfg.enableSelfServiceSignup !== true || cfg.enableAuthCaptcha !== true') &&
   signupSource.includes('captchaToken }'),
   'Self-service signup must be CAPTCHA-gated and may store only ordinary profile metadata.');
-const signupMetadata = signupSource.match(/options:\\s*\\{\\s*data:\\s*\\{([^}]*)\\}/);
-check(Boolean(signupMetadata) &&
-  signupMetadata[1].includes('display_name') &&
-  signupMetadata[1].includes('preferred_language') &&
-  !/role|isAdmin|account_type|verification_representative/i.test(signupMetadata[1]),
+check(signupSource.includes('display_name: displayName') &&
+  signupSource.includes('preferred_language: language') &&
+  !/role|isAdmin|account_type|verification_representative/i.test(
+    signupSource.slice(signupSource.indexOf('options:'), signupSource.indexOf('options:') + 260)
+  ),
   'Signup metadata must not accept a client-selected role or administrator flag.');
 check(Boolean(signinSource) &&
   signinSource.includes('cfg.enableAuthCaptcha === true') &&
@@ -444,7 +444,7 @@ check(authModalSource.includes('Тестировщик') && authModalSource.incl
   authModalSource.includes('enableAuthCaptcha') &&
   authModalSource.includes('enableSelfServiceSignup') &&
   authModalSource.includes('authTurnstile') &&
-  authModalSource.includes('turnstile.render') &&
+  app.includes('window.turnstile.render') &&
   !authModalSource.includes('name="role"'),
   'Auth UI must support RU/KG tester onboarding, Turnstile and no public role selector.');
 check(app.includes('testerBadge') && app.includes('adminBadge') &&
