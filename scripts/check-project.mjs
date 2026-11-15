@@ -47,6 +47,17 @@ function sqlTableBody(tableName) {
   const end = election.indexOf('\n);', start);
   return end < 0 ? '' : election.slice(start, end);
 }
+
+function sqlFunctionBody(source, signature) {
+  const start = source.indexOf(signature);
+  if (start < 0) return '';
+  const remaining = source.slice(start);
+  const delimiterMatch = remaining.match(/\bas\s+(\$[a-z_]*\$)/i);
+  if (!delimiterMatch) return '';
+  const bodyStart = start + delimiterMatch.index + delimiterMatch[0].length;
+  const bodyEnd = source.indexOf(delimiterMatch[1], bodyStart);
+  return bodyEnd < 0 ? '' : source.slice(bodyStart, bodyEnd);
+}
 const receiptBody = sqlTableBody('election_voter_receipts');
 const ballotBody = sqlTableBody('election_ballots');
 check(Boolean(receiptBody), 'Election voter receipt table definition is missing.');
@@ -79,6 +90,20 @@ check(election.includes('returns table(objection_id uuid,category text,descripti
   'Objection review queue must not return submitter IDs.');
 check(election.includes("stage in ('objections','certified')"),
   'Election results must not be visible before the objection stage.');
+
+const electionResultsBody = sqlFunctionBody(
+  election,
+  'create or replace function public.get_election_results(p_election_id uuid)'
+);
+check(Boolean(electionResultsBody), 'Election result RPC body is missing.');
+check(electionResultsBody.includes("if auth.uid() is null then raise exception 'not_authenticated'; end if;"),
+  'Election result RPC must reject calls without an authenticated account.');
+check(/if not exists\s*\(\s*select 1 from public\.elections where id=p_election_id and stage in \('objections','certified'\)\s*\)/.test(electionResultsBody),
+  'Election results must be gated specifically to objections/certified stages.');
+check(!/stage\s+in\s*\([^)]*'counting'/.test(electionResultsBody),
+  'Election results must remain unavailable during counting.');
+check(/count\(b\.ballot_id\)/.test(electionResultsBody) && /group by c\.id,c\.display_name/.test(electionResultsBody),
+  'Election result RPC must return candidate aggregates, not individual ballots.');
 check(election.includes("if auth.uid() is null then raise exception 'not_authenticated'; end if;") &&
   election.includes("if not exists(select 1 from public.elections where id=p_election_id and stage in ('objections','certified'))"),
   'Election result RPC must reject calls without an authenticated account.');
