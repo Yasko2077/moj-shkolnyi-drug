@@ -190,6 +190,7 @@ begin
  values(p_election_id,auth.uid(),v_display_name,trim(p_program)) returning id into v_id;
  insert into public.election_audit_log(election_id,actor_id,action) values(p_election_id,auth.uid(),''candidate_submitted'');
  return v_id;
+end;
 ';
 
 create or replace function public.review_election_candidate(p_candidate_id uuid,p_decision text,p_note text default null)
@@ -283,6 +284,7 @@ begin
  where id=p_objection_id;
  insert into public.election_audit_log(election_id,actor_id,action,details)
  values(v_election,auth.uid(),''objection_reviewed'',jsonb_build_object(''objection_id'',p_objection_id,''decision'',p_decision));
+end;
 ';
 
 create or replace function public.get_my_election_receipt(p_election_id uuid)
