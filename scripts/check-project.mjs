@@ -73,11 +73,11 @@ check(election.includes('returns table(objection_id uuid,category text,descripti
   'Objection review queue must not return submitter IDs.');
 check(election.includes("stage in ('objections','certified')"),
   'Election results must not be visible before the objection stage.');
-check(election.includes("if auth.uid() is null then raise exception 'not_authenticated'; end if;\\n if not exists(select 1 from public.elections where id=p_election_id and stage in ('objections','certified'))"),
+check(election.includes("if auth.uid() is null then raise exception 'not_authenticated'; end if;\n if not exists(select 1 from public.elections where id=p_election_id and stage in ('objections','certified'))"),
   'Election result RPC must reject calls without an authenticated account.');
-check(election.includes('select auth.uid() is not null\\n   and exists(select 1 from public.election_voter_receipts'),
+check(election.includes('select auth.uid() is not null\n   and exists(select 1 from public.election_voter_receipts'),
   'Election receipt RPC must return no positive result without an authenticated account.');
-check(election.includes("and auth.uid() is not null\\n order by c.submitted_at"),
+check(election.includes("and auth.uid() is not null\n order by c.submitted_at"),
   'Public candidate RPC must require an authenticated account.');
 check(!election.includes('insert into public.election_voter_receipts(election_id,user_id,ballot_id)'),
   'Vote receipt must not store a ballot identifier.');
