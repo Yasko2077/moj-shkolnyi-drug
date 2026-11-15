@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: yntymak-quality-${{ github.ref }}
+  group: yntymak-quality-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
