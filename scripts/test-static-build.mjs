@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const buildScript = path.join(root, "scripts", "build-static.mjs");
 const outputConfig = path.join(root, "dist", "supabase-config.js");
+const checkerScript = path.join(root, "scripts", "check-static-build.mjs");
 const variableNames = [
   "YNTYMAK_SUPABASE_URL",
   "YNTYMAK_SUPABASE_PUBLISHABLE_KEY",
@@ -102,6 +103,10 @@ try {
     YNTYMAK_ENABLE_CLOUD_MODULES: "true"
   }, true);
   const cloudStaging = await readConfig();
+  const checkerResult = spawnSync(process.execPath, [checkerScript], { cwd: root, encoding: "utf8" });
+  if (checkerResult.status !== 0) {
+    throw new Error("Connected staging publish directory failed validation: " + (checkerResult.stdout || "") + (checkerResult.stderr || ""));
+  }
   if (cloudStaging.enableCloudInitiatives !== true ||
       cloudStaging.enableCloudProjects !== true ||
       cloudStaging.enableCloudEvents !== true ||

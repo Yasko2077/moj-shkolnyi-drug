@@ -34,7 +34,7 @@ if (jsonStart < 0 || jsonEnd < jsonStart) {
   throw new Error("Generated public Supabase config is missing or malformed.");
 }
 const previewConfig = JSON.parse(publicConfig.slice(jsonStart, jsonEnd + 1));
-if (previewConfig.supabaseUrl && !/^https:\/\/[^/]+\\.supabase\\.co$/i.test(previewConfig.supabaseUrl)) {
+if (previewConfig.supabaseUrl && !/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(previewConfig.supabaseUrl)) {
   throw new Error("Public config contains an invalid staging Supabase URL.");
 }
 if (previewConfig.supabaseUrl && previewConfig.supabaseUrl.startsWith("https://suutpjjcendapzpebkcp.")) {
@@ -53,10 +53,6 @@ if (previewConfig.enableCloudElections === true) {
 }
 for (const flag of [
   "enableHostedAI",
-  "enableCloudInitiatives",
-  "enableCloudProjects",
-  "enableCloudEvents",
-  "enableCloudContent",
   "enableCloudElections",
   "enableAuthCaptcha",
   "enableSelfServiceSignup"
