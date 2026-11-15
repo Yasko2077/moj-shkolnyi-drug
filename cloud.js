@@ -275,7 +275,8 @@
   }
   async function listPolls() {
     const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт.');
-    const {data,error}=await c.from('community_polls').select('id,title,description,closes_at,is_open,poll_options(id,label,sort_order)').eq('is_open',true).order('created_at',{ascending:false}).limit(30);
+    const now=new Date().toISOString();
+    const {data,error}=await c.from('community_polls').select('id,title,description,closes_at,is_open,poll_options(id,label,sort_order)').eq('is_open',true).or(`closes_at.is.null,closes_at.gt.${now}`).order('created_at',{ascending:false}).limit(30);
     if(error) throw error;
     const polls=[];
     for(const p of data||[]){
