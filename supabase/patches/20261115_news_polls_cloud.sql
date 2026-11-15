@@ -37,25 +37,25 @@ alter table public.poll_options enable row level security;
 alter table public.poll_responses enable row level security;
 
 drop policy if exists news_posts_read on public.news_posts;
-create policy news_posts_read on public.news_posts for select to authenticated using(is_published or public.is_platform_admin());
+create policy news_posts_read on public.news_posts for select to authenticated using(is_published or public.is_verification_representative());
 drop policy if exists news_posts_insert_admin on public.news_posts;
-create policy news_posts_insert_admin on public.news_posts for insert to authenticated with check(created_by=(select auth.uid()) and public.is_platform_admin() and is_published=false);
+create policy news_posts_insert_admin on public.news_posts for insert to authenticated with check(created_by=(select auth.uid()) and public.is_verification_representative() and is_published=false);
 drop policy if exists news_posts_update_admin on public.news_posts;
-create policy news_posts_update_admin on public.news_posts for update to authenticated using(public.is_platform_admin()) with check(public.is_platform_admin());
+create policy news_posts_update_admin on public.news_posts for update to authenticated using(public.is_verification_representative()) with check(public.is_verification_representative());
 
 drop policy if exists community_polls_read on public.community_polls;
-create policy community_polls_read on public.community_polls for select to authenticated using(is_open or public.is_platform_admin() or created_by=(select auth.uid()));
+create policy community_polls_read on public.community_polls for select to authenticated using(is_open or public.is_verification_representative() or created_by=(select auth.uid()));
 drop policy if exists community_polls_insert_admin on public.community_polls;
-create policy community_polls_insert_admin on public.community_polls for insert to authenticated with check(created_by=(select auth.uid()) and public.is_platform_admin() and is_open=false);
+create policy community_polls_insert_admin on public.community_polls for insert to authenticated with check(created_by=(select auth.uid()) and public.is_verification_representative() and is_open=false);
 drop policy if exists community_polls_update_admin on public.community_polls;
-create policy community_polls_update_admin on public.community_polls for update to authenticated using(public.is_platform_admin()) with check(public.is_platform_admin());
+create policy community_polls_update_admin on public.community_polls for update to authenticated using(public.is_verification_representative()) with check(public.is_verification_representative());
 
 drop policy if exists poll_options_read on public.poll_options;
-create policy poll_options_read on public.poll_options for select to authenticated using(exists(select 1 from public.community_polls p where p.id=poll_id and (p.is_open or p.created_by=(select auth.uid()) or public.is_platform_admin())));
+create policy poll_options_read on public.poll_options for select to authenticated using(exists(select 1 from public.community_polls p where p.id=poll_id and (p.is_open or p.created_by=(select auth.uid()) or public.is_verification_representative())));
 drop policy if exists poll_options_insert_admin on public.poll_options;
-create policy poll_options_insert_admin on public.poll_options for insert to authenticated with check(public.is_platform_admin());
+create policy poll_options_insert_admin on public.poll_options for insert to authenticated with check(public.is_verification_representative());
 drop policy if exists poll_responses_private_read on public.poll_responses;
-create policy poll_responses_private_read on public.poll_responses for select to authenticated using(user_id=(select auth.uid()) or public.is_platform_admin());
+create policy poll_responses_private_read on public.poll_responses for select to authenticated using(user_id=(select auth.uid()) or public.is_verification_representative());
 
 create or replace function public.cast_poll_vote(p_poll_id uuid,p_option_id uuid) returns void
 language plpgsql security definer set search_path=public,pg_temp as $$
@@ -74,7 +74,7 @@ language sql security definer set search_path=public,pg_temp as $$
  select o.id,o.label,count(r.id)
  from public.poll_options o
  left join public.poll_responses r on r.option_id=o.id and r.poll_id=p_poll_id
- where o.poll_id=p_poll_id and exists(select 1 from public.community_polls p where p.id=p_poll_id and (p.is_open or p.created_by=auth.uid() or public.is_platform_admin()))
+ where o.poll_id=p_poll_id and exists(select 1 from public.community_polls p where p.id=p_poll_id and (p.is_open or p.created_by=auth.uid() or public.is_verification_representative()))
  group by o.id,o.label,o.sort_order order by o.sort_order
 $$;
 revoke all on function public.get_poll_results(uuid) from public,anon;
