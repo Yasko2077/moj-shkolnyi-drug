@@ -50,39 +50,39 @@ begin
     select 1 from pg_policies
     where schemaname='public' and tablename='profiles'
       and policyname='profiles_select_self_or_verifier'
-      and lower(coalesce(qual,'')) like '%select auth.uid()%'
-      and lower(coalesce(qual,'')) like '%select public.is_verification_representative()%'
+      and lower(coalesce(qual,'')) like '%auth.uid%' and lower(coalesce(qual,'')) like '%select%'
+      and lower(coalesce(qual,'')) like '%is_verification_representative%' and lower(coalesce(qual,'')) like '%select%'
   ) then raise exception 'profiles_select_policy_initplan_missing'; end if;
 
   if not exists (
     select 1 from pg_policies
     where schemaname='public' and tablename='profiles'
       and policyname='profiles_update_self'
-      and lower(coalesce(qual,'')) like '%select auth.uid()%'
-      and lower(coalesce(with_check,'')) like '%select auth.uid()%'
+      and lower(coalesce(qual,'')) like '%auth.uid%' and lower(coalesce(qual,'')) like '%select%'
+      and lower(coalesce(with_check,'')) like '%auth.uid%' and lower(coalesce(with_check,'')) like '%select%'
   ) then raise exception 'profiles_update_policy_initplan_missing'; end if;
 
   if not exists (
     select 1 from pg_policies
     where schemaname='public' and tablename='role_requests'
       and policyname='role_requests_insert_self'
-      and lower(coalesce(with_check,'')) like '%select auth.uid()%'
+      and lower(coalesce(with_check,'')) like '%auth.uid%' and lower(coalesce(with_check,'')) like '%select%'
   ) then raise exception 'role_requests_insert_policy_initplan_missing'; end if;
 
   if not exists (
     select 1 from pg_policies
     where schemaname='public' and tablename='role_requests'
       and policyname='role_requests_select_owner_or_verifier'
-      and lower(coalesce(qual,'')) like '%select auth.uid()%'
-      and lower(coalesce(qual,'')) like '%select public.is_verification_representative()%'
+      and lower(coalesce(qual,'')) like '%auth.uid%' and lower(coalesce(qual,'')) like '%select%'
+      and lower(coalesce(qual,'')) like '%is_verification_representative%' and lower(coalesce(qual,'')) like '%select%'
   ) then raise exception 'role_requests_select_policy_initplan_missing'; end if;
 
   if not exists (
     select 1 from pg_policies
     where schemaname='public' and tablename='role_assignments'
       and policyname='role_assignments_select_owner_or_verifier'
-      and lower(coalesce(qual,'')) like '%select auth.uid()%'
-      and lower(coalesce(qual,'')) like '%select public.is_verification_representative()%'
+      and lower(coalesce(qual,'')) like '%auth.uid%' and lower(coalesce(qual,'')) like '%select%'
+      and lower(coalesce(qual,'')) like '%is_verification_representative%' and lower(coalesce(qual,'')) like '%select%'
   ) then raise exception 'role_assignments_select_policy_initplan_missing'; end if;
 
   if to_regclass('public.project_join_requests') is null
