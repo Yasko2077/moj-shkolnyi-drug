@@ -44,7 +44,7 @@ function sqlTableBody(tableName) {
   const marker = `create table if not exists public.${tableName} (`;
   const start = election.indexOf(marker);
   if (start < 0) return '';
-  const end = election.indexOf('\\n);', start);
+  const end = election.indexOf('\n);', start);
   return end < 0 ? '' : election.slice(start, end);
 }
 const receiptBody = sqlTableBody('election_voter_receipts');
