@@ -82,6 +82,8 @@ check(cloud.includes('async function getMyProfile()') && cloud.includes('async f
   'Cloud profile read/update methods are missing.');
 check(app.includes('async function loadCloudProfile()'),
   'App must load the authenticated cloud profile.');
+check(app.includes('function activateAccountStore()') && app.includes('localStorage.setItem(activeStore,JSON.stringify(db))'),
+  'Browser demo data must be stored in an account-specific local namespace.');
 check(app.includes('readonly disabled'),
   'Cloud-verified school and district fields must be read-only in the UI.');
 check(app.includes('Поле «О себе» осталось только в этом браузере.'),
