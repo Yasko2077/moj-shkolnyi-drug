@@ -232,6 +232,7 @@ begin
  if p_next_stage='voting' and (now()< (select campaign_close_at from public.elections where id=p_election_id) or now()< (select voting_open_at from public.elections where id=p_election_id)) then raise exception 'voting_not_started'; end if;
  if p_next_stage='counting' and now()< (select voting_close_at from public.elections where id=p_election_id) then raise exception 'voting_not_closed'; end if;
  if p_next_stage='campaign' and not exists(select 1 from public.election_candidates where election_id=p_election_id and status='approved') then raise exception 'no_approved_candidates'; end if;
+ if p_next_stage='campaign' and exists(select 1 from public.election_candidates where election_id=p_election_id and status='pending') then raise exception 'candidate_review_incomplete'; end if;
  if p_next_stage='certified' and exists(select 1 from public.election_objections where election_id=p_election_id and status in ('submitted','under_review')) then raise exception 'unresolved_objections'; end if;
  update public.elections set stage=p_next_stage,updated_at=now() where id=p_election_id;
  insert into public.election_audit_log(election_id,actor_id,action,details)
