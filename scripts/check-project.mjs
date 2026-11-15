@@ -269,6 +269,13 @@ check(newsAtomic.includes('revoke insert (created_by,title,body,category,is_publ
   newsAtomic.includes('revoke update (title,body,category,is_published)'),
   'Atomic news migration must revoke prior column-level writes.');
 
+const projectLab = read('supabase/patches/20261115_project_lab.sql');
+check(projectLab.includes('revoke update on public.project_join_requests from anon, authenticated;') &&
+  projectLab.includes('revoke update(status,updated_at) on public.project_join_requests from anon, authenticated;'),
+  'Project join request status must not be directly writable by clients.');
+check(!projectLab.includes('grant update(status,updated_at) on public.project_join_requests to authenticated;'),
+  'Project join requests must be updated only through the review/withdraw RPCs.');
+
 const rlsTuning = read('supabase/patches/20261117_rls_initplan_tuning.sql');
 for (const policyName of [
   'profiles_select_self_or_verifier',
