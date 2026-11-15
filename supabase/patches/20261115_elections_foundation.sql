@@ -176,7 +176,7 @@ begin
 end $function$;
 
 create or replace function public.submit_election_candidate(p_election_id uuid,p_program text)
-returns uuid language plpgsql security definer set search_path=public,pg_temp as $
+returns uuid language plpgsql security definer set search_path=public,pg_temp as function$
 declare v_id uuid; v_e public.elections%rowtype; v_school uuid; v_display_name text;
 begin
  if auth.uid() is null then raise exception 'not_authenticated'; end if;
@@ -272,7 +272,7 @@ begin
 end $function$;
 
 create or replace function public.review_election_objection(p_objection_id uuid,p_decision text,p_resolution text)
-returns void language plpgsql security definer set search_path=public,pg_temp as $
+returns void language plpgsql security definer set search_path=public,pg_temp as function$
 declare v_election uuid;
 begin
  if auth.uid() is null or not public.is_verification_representative() then raise exception 'objection_review_forbidden'; end if;
