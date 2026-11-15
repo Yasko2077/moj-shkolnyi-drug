@@ -295,6 +295,45 @@ check((rlsTuning.split('(select auth.uid())').length - 1) >= 5,
 check(rlsTuning.includes('(select public.is_verification_representative())'),
   'RLS verifier checks should be evaluated as statement initplans.');
 
+const testerPatch = read('supabase/patches/20261115_tester_onboarding.sql');
+check(testerPatch.includes("add column if not exists account_type text not null default 'tester'") &&
+  testerPatch.includes("check (account_type = 'tester')") &&
+  testerPatch.includes('revoke update (account_type) on public.profiles from anon, authenticated;'),
+  'Every self-service profile must default to an immutable tester account type.');
+
+const adminProvisioning = read('supabase/admin/assign_privileged_accounts.sql.template');
+check(adminProvisioning.includes("'verification_representative'") &&
+  adminProvisioning.includes('email_confirmed_at is not null') &&
+  adminProvisioning.includes('verified_by, request_id') &&
+  adminProvisioning.includes('REPLACE_WITH_NESTEROV_AUTH_USER_UUID'),
+  'Privileged Nesterov/admin assignments must use a separate owner-only provisioning template.');
+check(!adminProvisioning.includes('create_my_profile(') &&
+  !adminProvisioning.includes('auth.admin.createUser') &&
+  !adminProvisioning.includes('supabase.auth.signUp'),
+  'The privileged-account template must not create accounts or bypass ordinary signup.');
+
+const signupStart = cloud.indexOf('async function signUp(');
+const signinStart = cloud.indexOf('async function signIn(', signupStart);
+const signupSource = signupStart >= 0 && signinStart > signupStart ? cloud.slice(signupStart, signinStart) : '';
+check(Boolean(signupSource) && signupSource.includes('options: { data: { display_name: displayName, preferred_language: language }'),
+  'Signup must create a basic profile using only display-name/language metadata.');
+check(!/role|isAdmin|verification_representative/i.test(signupSource),
+  'Signup must never accept a client-selected role or administrator flag.');
+check(cloud.includes(".select('display_name,preferred_language,school_id,grade_label,account_type')") &&
+  cloud.includes("accountType:data.account_type||'tester'"),
+  'Cloud profile loading must read the server-managed tester account type.');
+
+const authModalStart = app.indexOf('function loginModal(){');
+const electionModalStart = app.indexOf('function viewElection', authModalStart);
+const authModalSource = authModalStart >= 0 && electionModalStart > authModalStart ? app.slice(authModalStart, electionModalStart) : '';
+check(authModalSource.includes('Тестировщик') && authModalSource.includes('Сыноочу') &&
+  authModalSource.includes('name="privacyAck"') &&
+  !authModalSource.includes('name="role"'),
+  'Public signup must be bilingual, privacy-aware, and must not offer a role selector.');
+check(app.includes('testerBadge') && app.includes('adminBadge') &&
+  app.includes('window.YntymakCloud?.isAdmin?.()'),
+  'Profile must distinguish testers from server-verified administrators.');
+
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');
 check(matrix.includes('20261115_elections_foundation.sql'),
   'Security matrix must include the elections migration.');
