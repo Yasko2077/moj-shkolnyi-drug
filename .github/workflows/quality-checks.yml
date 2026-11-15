@@ -33,6 +33,8 @@ jobs:
         run: node scripts/check-project.mjs
       - name: Build allow-listed static website
         run: node scripts/build-static.mjs
+      - name: Test safe preview and staging build configurations
+        run: node scripts/test-static-build.mjs
       - name: Verify public bundle excludes private project materials
         run: node scripts/check-static-build.mjs
       - name: Set up Python
