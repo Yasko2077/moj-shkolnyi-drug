@@ -210,7 +210,7 @@ check(app.includes("data-cancel-registration"), 'Local event registration cancel
 check(app.includes('id="eventSearch"') && app.includes('id="eventCategory"') && app.includes('id="eventTime"'),
   'Event calendar search and filter controls are missing.');
 check(app.includes('function applyEventFilters()') && app.includes("time==='registered'") && app.includes("time==='upcoming'"),
-  'Event calendar filters must support upcoming dates and the current participant\'s registrations.');
+  'Event calendar filters must support upcoming dates and registrations for the current browser profile.');
 check(app.includes('data-event-reset') && app.includes("e.target.id==='eventSearch'"),
   'Event calendar filter reset and live search handlers are missing.');
 check(app.includes("state.page==='workspace'?t('workspace')"), 'Workspace breadcrumb must follow the selected language.');
