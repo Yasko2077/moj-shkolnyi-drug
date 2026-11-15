@@ -198,6 +198,18 @@ check(app.includes('name="publicNameConsent"') && app.includes('name="publicProg
 check(app.includes("d.get('publicNameConsent')!=='on'||d.get('publicProgramConsent')!=='on'"),
   'The nomination handler must enforce both publication consents.');
 
+// Student workspace regression checks
+check(app.includes('function workspace()'), 'Student personal workspace page is missing.');
+check(app.includes('function toggleFavorite(type,id)'), 'Saved-items interaction is missing.');
+check(app.includes('function addNotification(title,detail'), 'In-app notification helper is missing.');
+check(app.includes('data-task-toggle') && app.includes("document.addEventListener('change'"),
+  'Project task checkboxes must work both in page content and modal dialogs.');
+check(app.includes("action==='mark-notifications-read'"), 'Notification read-all action is missing.');
+check(app.includes("data-cancel-registration"), 'Local event registration cancellation is missing.');
+check(app.includes("state.page==='workspace'?t('workspace')"), 'Workspace breadcrumb must follow the selected language.');
+check(app.includes("workspace:'Жеке кабинет'") && app.includes("workspace:'Мой кабинет'"),
+  'Workspace navigation must have Russian and Kyrgyz labels.');
+
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');
 check(matrix.includes('20261115_elections_foundation.sql'),
   'Security matrix must include the elections migration.');
