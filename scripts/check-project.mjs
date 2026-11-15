@@ -269,6 +269,21 @@ check(newsAtomic.includes('revoke insert (created_by,title,body,category,is_publ
   newsAtomic.includes('revoke update (title,body,category,is_published)'),
   'Atomic news migration must revoke prior column-level writes.');
 
+const rlsTuning = read('supabase/patches/20261117_rls_initplan_tuning.sql');
+for (const policyName of [
+  'profiles_select_self_or_verifier',
+  'profiles_update_self',
+  'role_requests_insert_self',
+  'role_requests_select_owner_or_verifier',
+  'role_assignments_select_owner_or_verifier'
+]) {
+  check(rlsTuning.includes(policyName), `RLS initplan tuning must recreate ${policyName}.`);
+}
+check((rlsTuning.match(/\\(select auth\\.uid\\(\\)\\)/g) || []).length >= 5,
+  'RLS policies should wrap auth.uid() in scalar SELECT initplans.');
+check(rlsTuning.includes('(select public.is_verification_representative())'),
+  'RLS verifier checks should be evaluated as statement initplans.');
+
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');
 check(matrix.includes('20261115_elections_foundation.sql'),
   'Security matrix must include the elections migration.');
