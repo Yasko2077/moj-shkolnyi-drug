@@ -232,6 +232,10 @@ check(cloud.includes("c.rpc('publish_news_post'") &&
   !cloud.includes("c.from('news_posts').update("),
   'Cloud news client must publish only through the atomic publish_news_post RPC.');
 
+const eventSchemaPatch = read('supabase/patches/20261115_events_cloud.sql');
+check(eventSchemaPatch.includes('drop constraint if exists events_event_key_key;'),
+  'Event categories must not remain globally unique; multiple events may share one category.');
+
 // Explicitly revoke historical column-level grants, not only table privileges
 const eventHardening = read('supabase/patches/20261115_event_registration_hardening.sql');
 check(eventHardening.includes('revoke insert (') &&
