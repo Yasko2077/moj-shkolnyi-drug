@@ -88,9 +88,19 @@
   async function getMyProfile() {
     const c=getClient();
     if(!c||!session?.user) throw new Error('Войди в аккаунт.');
-    const {data,error}=await c.from('profiles')
+    let {data,error}=await c.from('profiles')
       .select('display_name,preferred_language,school_id,grade_label,account_type')
       .eq('id',session.user.id).maybeSingle();
+    // Keep sign-in compatible with the existing live schema until the tester migration
+    // is applied: the secure default remains "tester", never an elevated role.
+    if(error && /account_type|schema cache|column .* does not exist/i.test(error.message||'')){
+      const fallback=await c.from('profiles')
+        .select('display_name,preferred_language,school_id,grade_label')
+        .eq('id',session.user.id).maybeSingle();
+      data=fallback.data;
+      error=fallback.error;
+      if(data) data.account_type='tester';
+    }
     if(error) throw error;
     if(!data) return null;
     let schoolName='',districtKey='';
