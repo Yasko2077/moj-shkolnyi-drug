@@ -88,6 +88,8 @@ check(app.includes('function activateAccountStore()') && app.includes('localStor
   'Browser demo data must be stored in an account-specific local namespace.');
 check(app.includes('readonly disabled'),
   'Cloud-verified school and district fields must be read-only in the UI.');
+check(app.includes("kicker:'ЖЕКЕ КАБИНЕТИҢ'") && app.includes("kicker:'ТВОЯ УЧЁТНАЯ ЗАПИСЬ'"),
+  'The profile screen must have Kyrgyz and Russian labels.');
 check(app.includes('Поле «О себе» осталось только в этом браузере.'),
   'The UI must explain that the bio field is local-only.');
 
