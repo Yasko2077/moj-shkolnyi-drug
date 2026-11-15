@@ -68,6 +68,27 @@ end $$;
 revoke all on function public.cast_poll_vote(uuid,uuid) from public,anon;
 grant execute on function public.cast_poll_vote(uuid,uuid) to authenticated;
 
+create or replace function public.create_community_poll(p_title text,p_description text,p_options text[],p_closes_at timestamptz default null)
+returns uuid language plpgsql security definer set search_path=public,pg_temp as $
+declare v_poll uuid; v_option text; v_order integer:=0;
+begin
+ if not public.is_verification_representative() then raise exception 'Недостаточно прав'; end if;
+ if char_length(trim(p_title)) not between 5 and 140 or char_length(trim(p_description)) not between 10 and 500 then raise exception 'Проверь заголовок и описание'; end if;
+ if coalesce(array_length(p_options,1),0) not between 2 and 6 then raise exception 'Нужно от двух до шести вариантов'; end if;
+ if exists(select 1 from unnest(p_options) x where char_length(trim(x)) not between 1 and 120) then raise exception 'Проверь варианты ответа'; end if;
+ if p_closes_at is not null and p_closes_at<=now() then raise exception 'Дата закрытия должна быть в будущем'; end if;
+ insert into public.community_polls(created_by,title,description,closes_at,is_open)
+ values(auth.uid(),trim(p_title),trim(p_description),p_closes_at,false) returning id into v_poll;
+ foreach v_option in array p_options loop
+  insert into public.poll_options(poll_id,label,sort_order) values(v_poll,trim(v_option),v_order);
+  v_order:=v_order+1;
+ end loop;
+ update public.community_polls set is_open=true where id=v_poll;
+ return v_poll;
+end $;
+revoke all on function public.create_community_poll(text,text,text[],timestamptz) from public,anon;
+grant execute on function public.create_community_poll(text,text,text[],timestamptz) to authenticated;
+
 create or replace function public.get_poll_results(p_poll_id uuid)
 returns table(option_id uuid,label text,vote_count bigint)
 language sql security definer set search_path=public,pg_temp as $$
