@@ -45,6 +45,46 @@ begin
     raise exception 'poll_option_direct_write_still_allowed_or_table_missing';
   end if;
 
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='profiles'
+      and policyname='profiles_select_self_or_verifier'
+      and lower(coalesce(qual,'')) like '%select auth.uid()%'
+      and lower(coalesce(qual,'')) like '%select public.is_verification_representative()%'
+  ) then raise exception 'profiles_select_policy_initplan_missing'; end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='profiles'
+      and policyname='profiles_update_self'
+      and lower(coalesce(qual,'')) like '%select auth.uid()%'
+      and lower(coalesce(with_check,'')) like '%select auth.uid()%'
+  ) then raise exception 'profiles_update_policy_initplan_missing'; end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='role_requests'
+      and policyname='role_requests_insert_self'
+      and lower(coalesce(with_check,'')) like '%select auth.uid()%'
+  ) then raise exception 'role_requests_insert_policy_initplan_missing'; end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='role_requests'
+      and policyname='role_requests_select_owner_or_verifier'
+      and lower(coalesce(qual,'')) like '%select auth.uid()%'
+      and lower(coalesce(qual,'')) like '%select public.is_verification_representative()%'
+  ) then raise exception 'role_requests_select_policy_initplan_missing'; end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname='public' and tablename='role_assignments'
+      and policyname='role_assignments_select_owner_or_verifier'
+      and lower(coalesce(qual,'')) like '%select auth.uid()%'
+      and lower(coalesce(qual,'')) like '%select public.is_verification_representative()%'
+  ) then raise exception 'role_assignments_select_policy_initplan_missing'; end if;
+
   if not has_column_privilege('authenticated','public.profiles','display_name','UPDATE')
      or not has_column_privilege('authenticated','public.profiles','preferred_language','UPDATE')
      or not has_column_privilege('authenticated','public.profiles','grade_label','UPDATE')
