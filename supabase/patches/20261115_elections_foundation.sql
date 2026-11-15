@@ -199,7 +199,7 @@ declare v_election uuid;
 begin
  if auth.uid() is null or not public.is_verification_representative() then raise exception 'candidate_review_forbidden'; end if;
  if p_decision not in ('approved','rejected') then raise exception 'invalid_decision'; end if;
- select election_id into v_election from public.election_candidates where id=p_candidate_id and status='pending' for update;
+ select c.election_id into v_election from public.election_candidates c join public.elections e on e.id=c.election_id where c.id=p_candidate_id and c.status='pending' and e.stage='review' for update of c;
  if not found then raise exception 'candidate_not_pending'; end if;
  update public.election_candidates set status=p_decision,reviewed_by=auth.uid(),reviewed_at=now(),reviewer_note=left(coalesce(p_note,''),500) where id=p_candidate_id;
  insert into public.election_audit_log(election_id,actor_id,action,details)
