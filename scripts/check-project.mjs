@@ -71,8 +71,6 @@ check(election.includes('returns table(candidate_id uuid,display_name text,progr
   'Candidate review queue must not return voter/account IDs.');
 check(election.includes('returns table(objection_id uuid,category text,description text,status text,created_at timestamptz)'),
   'Objection review queue must not return submitter IDs.');
-check(cloud.includes('async function listElectionCandidateApplications(') && cloud.includes('async function listElectionObjections('),
-  'Cloud client moderation queue methods are missing.');
 check(election.includes("stage in ('objections','certified')"),
   'Election results must not be visible before the objection stage.');
 check(!election.includes('insert into public.election_voter_receipts(election_id,user_id,ballot_id)'),
@@ -86,6 +84,8 @@ check(!profilePatch.includes('grant update(school_id'),
 
 const cloud = read('cloud.js');
 const app = read('app.js');
+check(cloud.includes('async function listElectionCandidateApplications(') && cloud.includes('async function listElectionObjections('),
+  'Cloud client moderation queue methods are missing.');
 check(cloud.includes('async function getMyProfile()') && cloud.includes('async function updateMyProfile('),
   'Cloud profile read/update methods are missing.');
 check(app.includes('async function loadCloudProfile()'),
