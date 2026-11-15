@@ -206,6 +206,43 @@
     const {data,error}=await c.from('event_registrations').select('id,event_id,status,created_at,events(title,event_date,place_label)').eq('user_id',session.user.id).order('created_at',{ascending:false});
     if(error) throw error; return data||[];
   }
+  async function listNews() {
+    const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт.');
+    const {data,error}=await c.from('news_posts').select('id,title,body,category,published_at').eq('is_published',true).order('published_at',{ascending:false}).limit(50);
+    if(error) throw error;
+    return (data||[]).map(n=>({id:n.id,title:n.title,text:n.body,category:n.category,date:String(n.published_at).slice(0,10),source:'cloud'}));
+  }
+  async function createNews({title,text,category}) {
+    const c=getClient(); if(!c||!session?.user||!isAdmin) throw new Error('Публикация доступна только подтверждённому администратору.');
+    const row={created_by:session.user.id,title:String(title||'').trim(),body:String(text||'').trim(),category:String(category||'Объявление').trim(),is_published:false};
+    if(row.title.length<5||row.title.length>110||row.body.length<15||row.body.length>900) throw new Error('Проверь длину заголовка и текста.');
+    const {data,error}=await c.from('news_posts').insert(row).select('id').single();
+    if(error) throw error;
+    const {error:updateError}=await c.from('news_posts').update({is_published:true}).eq('id',data.id);
+    if(updateError) throw updateError;
+    return data.id;
+  }
+  async function listPolls() {
+    const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт.');
+    const {data,error}=await c.from('community_polls').select('id,title,description,closes_at,is_open,poll_options(id,label,sort_order)').eq('is_open',true).order('created_at',{ascending:false}).limit(30);
+    if(error) throw error;
+    const polls=[];
+    for(const p of data||[]){
+      const {data:results,error:resultError}=await c.rpc('get_poll_results',{p_poll_id:p.id});
+      if(resultError) throw resultError;
+      const {data:mine,error:mineError}=await c.from('poll_responses').select('option_id').eq('poll_id',p.id).eq('user_id',session.user.id).maybeSingle();
+      if(mineError) throw mineError;
+      const options=(p.poll_options||[]).sort((a,b)=>a.sort_order-b.sort_order);
+      const counts=options.map(o=>Number((results||[]).find(x=>x.option_id===o.id)?.vote_count||0));
+      polls.push({id:p.id,title:p.title,description:p.description,options:options.map(o=>o.label),optionIds:options.map(o=>o.id),votes:counts,myChoice:mine?options.findIndex(o=>o.id===mine.option_id):null,status:'open',source:'cloud'});
+    }
+    return polls;
+  }
+  async function castPollVote(pollId,optionId) {
+    const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт.');
+    const {error}=await c.rpc('cast_poll_vote',{p_poll_id:pollId,p_option_id:optionId});
+    if(error) throw error;
+  }
   async function askHostedAI(message, language = 'ru', history = []) {
     const c = getClient();
     if (!cfg.enableHostedAI || !c || !session) throw new Error('Внешняя ИИ-модель не подключена. Доступен локальный помощник.');
@@ -217,11 +254,12 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listEvents, createEvent, registerForEvent, listMyRegistrations, askHostedAI,
+    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listEvents, createEvent, registerForEvent, listMyRegistrations, listNews, createNews, listPolls, castPollVote, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
     initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
     projectsEnabled: () => Boolean(cfg.enableCloudProjects),
-    eventsEnabled: () => Boolean(cfg.enableCloudEvents)
+    eventsEnabled: () => Boolean(cfg.enableCloudEvents),
+    contentEnabled: () => Boolean(cfg.enableCloudContent)
   };
 })();
