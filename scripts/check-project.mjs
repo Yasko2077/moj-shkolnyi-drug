@@ -217,6 +217,20 @@ check(app.includes("state.page==='workspace'?t('workspace')"), 'Workspace breadc
 check(app.includes("workspace:'Жеке кабинет'") && app.includes("workspace:'Мой кабинет'"),
   'Workspace navigation must have Russian and Kyrgyz labels.');
 
+// Atomic news publishing and removal of the legacy event-registration overload
+const newsHardening = read('supabase/patches/20261116_news_publish_atomic.sql');
+check(newsHardening.includes('create or replace function public.publish_news_post(') &&
+  newsHardening.includes('public.is_verification_representative()'),
+  'News publishing must use a server-side RPC with representative authorization.');
+check(newsHardening.includes('revoke insert, update, delete on public.news_posts from anon, authenticated;'),
+  'Direct client writes to news posts must be disabled after atomic publishing is introduced.');
+check(newsHardening.includes('drop function if exists public.register_for_event(uuid,text,text,text,text,text);'),
+  'Legacy event registration overload must be removed.');
+check(cloud.includes("c.rpc('publish_news_post'") &&
+  !cloud.includes("c.from('news_posts').insert(") &&
+  !cloud.includes("c.from('news_posts').update("),
+  'Cloud news client must publish only through the atomic publish_news_post RPC.');
+
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');
 check(matrix.includes('20261115_elections_foundation.sql'),
   'Security matrix must include the elections migration.');
