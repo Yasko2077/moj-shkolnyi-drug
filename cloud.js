@@ -295,9 +295,12 @@
     const {data,error}=await c.rpc('create_platform_event',{p_event_key:category,p_title:title,p_description:description,p_event_date:date,p_place_label:place,p_capacity:Number(capacity),p_scope:scope,p_target_label:target,p_district_key:district||null});
     if(error) throw error; return data;
   }
-  async function registerForEvent({eventId,name,school,grade}) {
+  async function registerForEvent({eventId,organizerAccessConsent=false}) {
     const c=getClient(); if(!c||!session?.user) throw new Error('Войди в аккаунт, чтобы зарегистрироваться.');
-    const {data,error}=await c.rpc('register_for_event',{p_event_id:eventId,p_participant_name:name,p_school_label:school,p_grade_label:grade,p_participation_format:'individual',p_team_name:null});
+    if(organizerAccessConsent!==true) throw new Error('Нужно согласие на передачу минимальных данных организатору именно этого события.');
+    const {data,error}=await c.rpc('register_for_event',{
+      p_event_id:eventId,p_organizer_access_consent:organizerAccessConsent
+    });
     if(error) throw error; return data;
   }
   async function getEventRoster(eventId) {
