@@ -167,3 +167,44 @@ Read-only инвентаризация целевой базы:
 3. Сформировать отдельный staging baseline и проверить полный порядок патчей с нуля.
 4. Прогнать положительные и отрицательные RLS-сценарии с синтетическими аккаунтами.
 5. Только после успешного staging — согласовать с ответственным взрослым контролируемое развёртывание.
+
+
+## 10. Read-only проверка фактического Supabase (2026-11-15)
+
+Выполнена инвентаризация удалённого проекта через read-only операции: список таблиц/колонок/FK, migration history, функции и их ACL, RLS policies, column grants, Security Advisor, Performance Advisor и список Edge Functions. SQL-изменения не выполнялись; значения пользовательских строк не читались.
+
+### 10.1. Фактическая база
+
+- Migration history API вернул пустой список (`migrations: []`). Это не доказывает, что база пуста; таблицы и функции уже существуют. Историю нужно восстановить/сверить отдельно, а не считать патчи применёнными.
+- В `public` обнаружены базовые таблицы: `schools`, `profiles`, `role_catalog`, `role_requests`, `role_assignments`, `events`, `event_registrations`.
+- `events` сейчас имеет только базовые поля `id,event_key,title,is_open,created_at`. Расширенные поля календаря из патчей отсутствуют.
+- `event_registrations` содержит старую модель с пользовательскими полями и `public_name_consent`; поля `organizer_access_consent` и `organizer_access_consent_at` отсутствуют.
+- Таблицы initiatives, projects, news, polls, elections и AI quota в фактическом списке не обнаружены.
+- Edge Functions API вернул пустой список; `yntymak-assistant` в проекте пока не развёрнута.
+- Схема и metadata подтверждают, что `schema_mvp07.sql` не соответствует действующей модели. В рабочей базе используется `events/event_registrations`, а не старые `platform_events/platform_event_registrations`.
+
+### 10.2. Обнаруженные блокирующие риски текущей event-схемы
+
+**LIVE-EVENT-01 — прямой INSERT в регистрации обходит RPC.** В базе у роли `authenticated` есть column-level INSERT на `event_registrations`, а RLS policy `event_registrations_insert_self` разрешает вставку строки с `user_id=auth.uid()` и `status='registered'`. Это позволяет обойти серверную проверку лимита мест, проверку профиля и отдельное согласие на доступ организатора. Нужен отзыв прямых INSERT/UPDATE/DELETE и регистрация только через проверенный RPC. Подготовленный патч `20261115_event_registration_hardening.sql` делает отзыв прямых write-прав, но пока не применён.
+
+**LIVE-EVENT-02 — устаревший roster RPC имеет слишком широкую область доступа.** Фактическая функция `get_event_roster(p_event_key text)` возвращает персональные поля всем пользователям, для которых `can_manage_events()` истинна. Эта функция считает полномочными роли `event_organizer`, `school_president`, `city_council_chair`, `city_council_deputy`, `district_chair`, `city_chair` без проверки соответствия конкретному мероприятию, школе или району. Нужна замена на UUID-scoped `get_event_roster(uuid)` с проверкой создателя события и действующей территориальной роли. Подготовленный `20261115_event_roster_scope.sql` реализует более узкую проверку, но пока не применён.
+
+Оба риска относятся к текущей схеме Supabase независимо от того, что клиентские cloud feature flags выключены. До исправления нельзя включать облачную регистрацию мероприятий или показывать roster реальным пользователям.
+
+### 10.3. Security Advisor
+
+Зафиксированы:
+- 5 предупреждений `authenticated_security_definer_function_executable`: `can_manage_events()`, `create_my_profile(...)`, старый `get_event_roster(text)`, `is_verification_representative()`, `review_role_request(...)`. Наличие EXECUTE для authenticated само по себе не доказывает уязвимость; функции требуют индивидуальной проверки контракта, ACL и проверок `auth.uid()`. Для старого roster подтверждён риск из LIVE-EVENT-02.
+- 1 предупреждение `auth_leaked_password_protection`: защита от скомпрометированных паролей выключена. Рекомендуется включить её через Auth settings после согласования и проверки пользовательского потока.
+
+### 10.4. Performance Advisor
+
+Обнаружены 7 неиндексированных FK и 7 предупреждений RLS initplan. Среди FK: `event_registrations.user_id`, `profiles.school_id`, `role_assignments.school_id`, `role_assignments.verified_by`, `role_requests.requested_role_key`, `role_requests.reviewed_by`, `role_requests.school_id`. В репозитории есть патч `20261115_fk_indexes.sql`, но он ещё не применён. RLS initplan затрагивает политики profiles, role_requests, role_assignments и event_registrations; после фиксации функциональной схемы нужно оптимизировать выражения auth-вызовов.
+
+### 10.5. Следующие действия
+
+1. Сначала согласовать с ответственным взрослым окно безопасного обслуживания и резервную копию текущего проекта.
+2. Создать/подготовить отдельный staging-проект или ветку и восстановить на ней baseline; не запускать миграции на production «вслепую».
+3. В staging применить event hardening и UUID-scoped roster, затем проверить обычного ученика, школьного президента, районного председателя, создателя события и постороннего пользователя.
+4. В staging применить остальные патчи строго по зависимостям и сверить итоговые таблицы/RPC с `cloud.js`.
+5. Только после прохождения негативных тестов согласовать отдельный change plan для production.
