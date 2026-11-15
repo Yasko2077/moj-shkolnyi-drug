@@ -315,6 +315,71 @@ check((rlsTuning.split('(select auth.uid())').length - 1) >= 5,
 check(rlsTuning.includes('(select public.is_verification_representative())'),
   'RLS verifier checks should be evaluated as statement initplans.');
 
+const indexHtml = read('index.html');
+const webManifest = read('manifest.webmanifest');
+const vercelConfig = read('vercel.json');
+const serviceWorker = read('service-worker.js');
+const favicon = read('favicon.svg');
+const offlinePage = read('offline.html');
+let manifestData = null;
+let hostingData = null;
+try { manifestData = JSON.parse(webManifest); } catch (error) {
+  errors.push(`Web app manifest is not valid JSON: ${error.message}`);
+}
+try { hostingData = JSON.parse(vercelConfig); } catch (error) {
+  errors.push(`Vercel config is not valid JSON: ${error.message}`);
+}
+check(indexHtml.includes('href="./manifest.webmanifest"') &&
+  indexHtml.includes('href="./favicon.svg"') &&
+  indexHtml.includes('id="main-content"') &&
+  indexHtml.includes('class="skip-link"'),
+  'The portal HTML must expose its install manifest, brand icon, main landmark, and skip link.');
+check(Boolean(manifestData) && manifestData.name.includes('Ынтымак') &&
+  manifestData.display === 'standalone' && manifestData.start_url === './' &&
+  manifestData.icons?.some(icon => icon.src === './favicon.svg'),
+  'The install manifest must identify Ынтымак and reference its app icon.');
+check(Boolean(hostingData) && hostingData.headers?.some(rule =>
+  rule.headers?.some(header => header.key === 'X-Content-Type-Options' && header.value === 'nosniff')) &&
+  hostingData.headers?.some(rule =>
+  rule.headers?.some(header => header.key === 'X-Frame-Options' && header.value === 'DENY')),
+  'Static hosting must send basic browser security headers.');
+check(indexHtml.includes('name="robots" content="noindex,nofollow"') &&
+  hostingData.headers?.some(rule => rule.headers?.some(header =>
+    header.key === 'X-Robots-Tag' && header.value === 'noindex, nofollow')) &&
+  read('robots.txt').includes('Disallow: /'),
+  'The pre-launch tester site must remain excluded from search indexing.');
+check(favicon.includes('<svg') && favicon.includes('viewBox=') &&
+  serviceWorker.includes('yntymak-shell-v1') &&
+  serviceWorker.includes('./offline.html') &&
+  offlinePage.includes('Нет соединения'),
+  'The PWA shell must include a branded icon, versioned offline cache, and offline fallback page.');
+check(app.includes("navigator.serviceWorker.register('./service-worker.js')") &&
+  app.includes("setAttribute('aria-expanded'"),
+  'The app must register its service worker and keep mobile menu accessibility state in sync.');
+
+const homeStart = app.indexOf('function home(){');
+const homeEnd = app.indexOf('\\nfunction ideaCard', homeStart);
+const homeSource = homeStart >= 0 && homeEnd > homeStart ? app.slice(homeStart, homeEnd) : '';
+check(Boolean(homeSource) && homeSource.includes('data-action="open-auth"') &&
+  homeSource.includes("featuresTitle:") && homeSource.includes('districtsTitle:'),
+  'The landing page must provide tester onboarding, feature discovery, and the four-district overview.');
+if (homeSource) {
+  const renderHome = new Function('state','btn', `${homeSource}; return home();`);
+  const mockButton = (label,attrs='',cls='') => `<button class="btn ${cls}" ${attrs}>${label}</button>`;
+  for (const language of ['RU','KG']) {
+    const rendered = renderHome({lang:language},mockButton);
+    check(rendered.includes('data-action="open-auth"') &&
+      rendered.includes('data-page="projects"') &&
+      rendered.includes('portal-feature-grid') &&
+      rendered.includes('portal-safety'),
+      `Rendered ${language} homepage must include tester signup, feature links, and safety guidance.`);
+    check(rendered.includes(language==='KG'?'Тестирлөөгө кошулуу':'Присоединиться к тестированию'),
+      `Rendered ${language} homepage must show the localized tester call-to-action.`);
+  }
+}
+check(app.includes("if(action==='open-auth')loginModal();"),
+  'All portal tester calls-to-action must open the registration modal.');
+
 const testerPatch = read('supabase/patches/20261115_tester_onboarding.sql');
 check(testerPatch.includes("add column if not exists account_type text not null default 'tester'") &&
   testerPatch.includes("check (account_type = 'tester')") &&
