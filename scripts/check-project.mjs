@@ -409,11 +409,16 @@ check(Boolean(signupSource) &&
   signupSource.includes('cfg.enableSelfServiceSignup !== true || cfg.enableAuthCaptcha !== true') &&
   signupSource.includes('captchaToken }'),
   'Self-service signup must be CAPTCHA-gated and may store only ordinary profile metadata.');
-check(signupSource.includes('display_name: displayName') &&
-  signupSource.includes('preferred_language: language') &&
-  !/role|isAdmin|account_type|verification_representative/i.test(
-    signupSource.slice(signupSource.indexOf('options:'), signupSource.indexOf('options:') + 260)
-  ),
+const signupOptionsStart = signupSource.indexOf('options:');
+const signupDataStart = signupSource.indexOf('data: {', signupOptionsStart);
+const signupDataEnd = signupSource.indexOf('}', signupDataStart);
+const signupUserMetadata = signupDataStart >= 0 && signupDataEnd > signupDataStart
+  ? signupSource.slice(signupDataStart, signupDataEnd + 1)
+  : '';
+check(signupUserMetadata.includes('display_name: displayName') &&
+  signupUserMetadata.includes('preferred_language: language'),
+  'Signup user metadata must contain the ordinary profile fields.');
+check(!/role|isAdmin|account_type|verification_representative/i.test(signupUserMetadata),
   'Signup metadata must not accept a client-selected role or administrator flag.');
 check(Boolean(signinSource) &&
   signinSource.includes('cfg.enableAuthCaptcha === true') &&
@@ -439,14 +444,16 @@ check(browserConfig.includes('enableAuthCaptcha: false') &&
 const authModalStart = app.indexOf('function loginModal(){');
 const recoveryModalStart = app.indexOf('function passwordRecoveryModal', authModalStart);
 const authModalSource = authModalStart >= 0 && recoveryModalStart > authModalStart ? app.slice(authModalStart, recoveryModalStart) : '';
-check(authModalSource.includes('Тестировщик') && authModalSource.includes('Сыноочу') &&
-  authModalSource.includes('name="privacyAck"') &&
-  authModalSource.includes('enableAuthCaptcha') &&
-  authModalSource.includes('enableSelfServiceSignup') &&
-  authModalSource.includes('authTurnstile') &&
-  app.includes('window.turnstile.render') &&
-  !authModalSource.includes('name="role"'),
-  'Auth UI must support RU/KG tester onboarding, Turnstile and no public role selector.');
+check(authModalSource.includes('Тестировщик') && authModalSource.includes('Сыноочу'),
+  'Auth UI must localize tester status in Russian and Kyrgyz.');
+check(authModalSource.includes('name="privacyAck"'),
+  'Public signup must require the privacy acknowledgement.');
+check(authModalSource.includes('enableAuthCaptcha') && authModalSource.includes('enableSelfServiceSignup'),
+  'Public signup must depend on the explicit CAPTCHA and self-service config switches.');
+check(authModalSource.includes('authTurnstile') && app.includes('window.turnstile.render'),
+  'Auth UI must display the configured Turnstile challenge.');
+check(!authModalSource.includes('name="role"'),
+  'Auth UI must not offer a public role or administrator selector.');
 check(app.includes('testerBadge') && app.includes('adminBadge') &&
   app.includes('window.YntymakCloud?.isAdmin?.()'),
   'Profile must distinguish testers from server-verified administrators.');
