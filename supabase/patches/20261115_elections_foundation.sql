@@ -292,6 +292,32 @@ begin
 end;
 ';
 
+create or replace function public.list_election_candidate_applications(p_election_id uuid)
+returns table(candidate_id uuid,display_name text,program text,submitted_at timestamptz)
+language plpgsql stable security definer set search_path=public,pg_temp as $function$
+begin
+ if auth.uid() is null or not public.is_verification_representative() then raise exception 'candidate_queue_forbidden'; end if;
+ if not exists(select 1 from public.elections where id=p_election_id and stage='review') then raise exception 'candidate_review_unavailable'; end if;
+ return query
+ select c.id,c.display_name,c.program,c.submitted_at
+ from public.election_candidates c
+ where c.election_id=p_election_id and c.status='pending'
+ order by c.submitted_at,c.id;
+end $function$;
+
+create or replace function public.list_election_objections(p_election_id uuid)
+returns table(objection_id uuid,category text,description text,status text,created_at timestamptz)
+language plpgsql stable security definer set search_path=public,pg_temp as $function$
+begin
+ if auth.uid() is null or not public.is_verification_representative() then raise exception 'objection_queue_forbidden'; end if;
+ if not exists(select 1 from public.elections where id=p_election_id and stage='objections') then raise exception 'objection_review_unavailable'; end if;
+ return query
+ select o.id,o.category,o.description,o.status,o.created_at
+ from public.election_objections o
+ where o.election_id=p_election_id and o.status in ('submitted','under_review')
+ order by o.created_at,o.id;
+end $function$;
+
 create or replace function public.get_my_election_receipt(p_election_id uuid)
 returns boolean language sql stable security definer set search_path=public,pg_temp as $function$
  select exists(select 1 from public.election_voter_receipts where election_id=p_election_id and user_id=auth.uid())
@@ -316,6 +342,8 @@ revoke all on function public.cast_election_vote(uuid,uuid) from public,anon;
 revoke all on function public.get_election_results(uuid) from public,anon;
 revoke all on function public.submit_election_objection(uuid,text,text) from public,anon;
 revoke all on function public.review_election_objection(uuid,text,text) from public,anon;
+revoke all on function public.list_election_candidate_applications(uuid) from public,anon;
+revoke all on function public.list_election_objections(uuid) from public,anon;
 revoke all on function public.get_my_election_receipt(uuid) from public,anon;
 revoke all on function public.get_election_public_candidates(uuid) from public,anon;
 grant execute on function public.create_election(text,text,text,text,uuid,text,text,timestamptz,timestamptz,timestamptz,timestamptz,timestamptz) to authenticated;
@@ -327,6 +355,8 @@ grant execute on function public.cast_election_vote(uuid,uuid) to authenticated;
 grant execute on function public.get_election_results(uuid) to authenticated;
 grant execute on function public.submit_election_objection(uuid,text,text) to authenticated;
 grant execute on function public.review_election_objection(uuid,text,text) to authenticated;
+grant execute on function public.list_election_candidate_applications(uuid) to authenticated;
+grant execute on function public.list_election_objections(uuid) to authenticated;
 grant execute on function public.get_my_election_receipt(uuid) to authenticated;
 grant execute on function public.get_election_public_candidates(uuid) to authenticated;
 
