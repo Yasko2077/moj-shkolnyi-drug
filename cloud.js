@@ -136,6 +136,55 @@
     if (error) throw error;
     return data;
   }
+  async function listProjects() {
+    const c = getClient();
+    if (!c || !session) throw new Error('Для просмотра проектов войди в аккаунт.');
+    const { data, error } = await c.from('student_projects')
+      .select('id,title,description,category,scope,target_label,district_key,first_task,status,created_at,created_by')
+      .order('created_at', { ascending: false }).limit(100);
+    if (error) throw error;
+    return (data || []).map(p => ({
+      id:p.id, title:p.title, description:p.description, category:p.category,
+      scope:p.scope, target:p.target_label, district:p.district_key || '',
+      stage:p.status === 'completed' ? 'completed' : p.status === 'published' ? 'active' : 'review',
+      owner:p.created_by === session.user.id ? 'Ты' : 'Участник',
+      members:1, created:String(p.created_at).slice(0,10),
+      tasks:[p.first_task], source:'cloud', canManage:p.created_by === session.user.id
+    }));
+  }
+  async function createProject({ title, description, category, scope, target, district = '', firstTask }) {
+    const c = getClient();
+    if (!c || !session?.user) throw new Error('Войди в аккаунт, чтобы создать проект.');
+    const clean = {
+      title:String(title || '').trim(), description:String(description || '').trim(),
+      category:String(category || 'Другое').trim().slice(0,60),
+      scope:['school','district','city'].includes(scope) ? scope : 'school',
+      target_label:String(target || '').trim(), first_task:String(firstTask || '').trim()
+    };
+    if(clean.title.length<5||clean.title.length>100||clean.description.length<20||clean.description.length>900||clean.target_label.length<2||clean.target_label.length>120||clean.first_task.length<3||clean.first_task.length>140) {
+      throw new Error('Проверь обязательные поля и длину текста.');
+    }
+    if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:\+?996|0)\s?\d{3}[\s-]?\d{3}[\s-]?\d{3}|\b\d{10,}\b/i.test(Object.values(clean).join(' '))) {
+      throw new Error('Не добавляй контакты и личные данные в описание проекта.');
+    }
+    if(clean.scope==='district'&&!['lenin','pervomai','oktyabr','sverdlov'].includes(district)) throw new Error('Выбери район для районного проекта.');
+    const {data,error}=await c.from('student_projects').insert({
+      created_by:session.user.id,...clean,
+      district_key:['lenin','pervomai','oktyabr','sverdlov'].includes(district)?district:null,
+      status:'review'
+    }).select('id').single();
+    if(error) throw error;
+    return data;
+  }
+  async function requestToJoinProject(projectId, message='') {
+    const c=getClient();
+    if(!c||!session?.user) throw new Error('Войди в аккаунт, чтобы отправить заявку.');
+    const {data,error}=await c.from('project_join_requests').insert({
+      project_id:projectId,user_id:session.user.id,message:String(message||'').trim().slice(0,300),status:'pending'
+    }).select('id').single();
+    if(error) throw error;
+    return data;
+  }
   async function askHostedAI(message, language = 'ru', history = []) {
     const c = getClient();
     if (!cfg.enableHostedAI || !c || !session) throw new Error('Внешняя ИИ-модель не подключена. Доступен локальный помощник.');
@@ -147,9 +196,10 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, checkAdmin, listInitiatives, createInitiative, askHostedAI,
+    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
-    initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives)
+    initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
+    projectsEnabled: () => Boolean(cfg.enableCloudProjects)
   };
 })();
