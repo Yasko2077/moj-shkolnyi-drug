@@ -359,6 +359,26 @@ check(app.includes('testerBadge') && app.includes('adminBadge') &&
   app.includes('window.YntymakCloud?.isAdmin?.()'),
   'Profile must distinguish testers from server-verified administrators.');
 
+const modalRender = new Function('state','window','esc','modal',
+  `${authModalSource}; loginModal();`);
+for (const language of ['RU','KG']) {
+  let rendered = null;
+  modalRender(
+    {lang:language},
+    {YntymakCloud:{configured:()=>true}},
+    value=>String(value ?? ''),
+    (title,body)=>{ rendered={title,body}; }
+  );
+  check(Boolean(rendered) && rendered.body.includes('id="loginForm"') &&
+    rendered.body.includes('id="signupForm"') &&
+    rendered.body.includes('name="privacyAck"') &&
+    !rendered.body.includes('+<form') &&
+    !rendered.body.includes('name="role"'),
+    `Rendered ${language} auth modal must contain working login/signup forms without role selection.`);
+  check(rendered.body.includes(language==='KG'?'Сыноочу':'Тестировщик'),
+    `Rendered ${language} auth modal must label the tester status.`);
+}
+
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');
 check(matrix.includes('20261115_elections_foundation.sql'),
   'Security matrix must include the elections migration.');
