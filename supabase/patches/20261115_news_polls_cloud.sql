@@ -55,7 +55,7 @@ create policy poll_options_read on public.poll_options for select to authenticat
 drop policy if exists poll_options_insert_admin on public.poll_options;
 create policy poll_options_insert_admin on public.poll_options for insert to authenticated with check(public.is_verification_representative());
 drop policy if exists poll_responses_private_read on public.poll_responses;
-create policy poll_responses_private_read on public.poll_responses for select to authenticated using(user_id=(select auth.uid()) or public.is_verification_representative());
+create policy poll_responses_private_read on public.poll_responses for select to authenticated using(user_id=(select auth.uid()));
 
 create or replace function public.cast_poll_vote(p_poll_id uuid,p_option_id uuid) returns void
 language plpgsql security definer set search_path=public,pg_temp as $$
