@@ -5,6 +5,7 @@
 
 drop policy if exists event_registrations_insert_self on public.event_registrations;
 drop policy if exists event_registrations_read_owner_or_organizer on public.event_registrations;
+drop policy if exists event_registrations_read_self on public.event_registrations;
 
 create policy event_registrations_read_self
 on public.event_registrations
@@ -12,7 +13,8 @@ for select
 to authenticated
 using (user_id = (select auth.uid()));
 
--- The SECURITY DEFINER RPC performs the insert after validating the event and capacity.
+-- Keep the old client-supplied registration RPC disabled. The consent-based profile-backed
+-- overload is installed and granted by 20261115_event_registration_consent.sql.
 revoke all privileges on table public.event_registrations from anon, authenticated;
 -- REVOKE on the table does not remove separately granted column-level privileges.
 revoke insert (
@@ -28,9 +30,9 @@ grant select on public.event_registrations to authenticated;
 -- Disable the broad legacy roster function until the event-UUID scoped replacement is installed.
 revoke all on function public.get_event_roster(text) from public, anon, authenticated;
 
--- Explicitly keep public/anonymous callers out of the registration RPC.
-revoke all on function public.register_for_event(uuid,text,text,text,text,text) from public, anon;
-grant execute on function public.register_for_event(uuid,text,text,text,text,text) to authenticated;
+-- The legacy client-supplied registration RPC must remain unavailable.
+revoke all on function public.register_for_event(uuid,text,text,text,text,text)
+  from public, anon, authenticated;
 
 comment on table public.event_registrations is
-'Private participant records. Authenticated users may read only their own row; registration is performed through register_for_event RPC. Authorized roster access is provided by the separately scoped get_event_roster RPC.';
+'Private participant records. Authenticated users may read only their own row; registration is performed through the consent-based register_for_event RPC. Authorized roster access is provided by the separately scoped get_event_roster RPC.';
