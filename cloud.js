@@ -146,6 +146,7 @@
     configured, getClient, init, refresh, signUp, signIn, signOut,
     ensureProfile, checkAdmin, listInitiatives, createInitiative, askHostedAI,
     getSession: () => session, getUser: () => authUser,
-    isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI)
+    isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
+    initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives)
   };
 })();
