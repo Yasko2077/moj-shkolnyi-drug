@@ -61,10 +61,16 @@
     });
     if (error) throw error;
     session = data.session || null; authUser = data.user || null;
+    isAdmin = false;
     if (session) {
-      try { await ensureProfile(); } catch (e) { throw new Error(`Аккаунт создан, но профиль не подготовлен: ${e.message}. Проверь миграцию профиля.`); }
+      try {
+        await ensureProfile();
+        await checkAdmin();
+      } catch (e) {
+        throw new Error(`Аккаунт создан, но профиль не подготовлен: ${e.message}. Проверь миграцию профиля.`);
+      }
     }
-    return { emailConfirmationRequired: !data.session };
+    return { emailConfirmationRequired: !data.session, accountType: 'tester', isAdmin };
   }
   async function signIn({ email, password }) {
     const c = getClient(); if (!c) throw new Error('Настрой Supabase в supabase-config.js.');
@@ -83,7 +89,7 @@
     const c=getClient();
     if(!c||!session?.user) throw new Error('Войди в аккаунт.');
     const {data,error}=await c.from('profiles')
-      .select('display_name,preferred_language,school_id,grade_label')
+      .select('display_name,preferred_language,school_id,grade_label,account_type')
       .eq('id',session.user.id).maybeSingle();
     if(error) throw error;
     if(!data) return null;
@@ -101,7 +107,8 @@
       schoolId:data.school_id||null,
       schoolName,
       districtKey,
-      gradeLabel:data.grade_label||''
+      gradeLabel:data.grade_label||'',
+      accountType:data.account_type||'tester'
     };
   }
   async function updateMyProfile({displayName,gradeLabel,language='ru'}) {
