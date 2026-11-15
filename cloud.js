@@ -82,23 +82,32 @@
     }
     return { emailConfirmationRequired: !data.session, accountType: 'tester', isAdmin };
   }
-  async function signIn({ email, password }) {
+  async function signIn({ email, password, captchaToken = '' }) {
     const c = getClient(); if (!c) throw new Error('Настрой Supabase в supabase-config.js.');
-    const { data, error } = await c.auth.signInWithPassword({ email, password });
+    if (cfg.enableAuthCaptcha === true && !String(captchaToken || '').trim()) {
+      throw new Error('Пройди проверку безопасности перед входом.');
+    }
+    const { data, error } = await c.auth.signInWithPassword({
+      email, password, options: { captchaToken: String(captchaToken || '') }
+    });
     if (error) throw error;
     session = data.session; authUser = data.user;
     await ensureProfile(); await checkAdmin();
     return { user: authUser, isAdmin };
   }
-  async function requestPasswordReset(email) {
+  async function requestPasswordReset(email, captchaToken = '') {
     const c = getClient();
     if (!c) throw new Error('Подключение Supabase ещё не настроено.');
     const cleanEmail = String(email || '').trim().toLowerCase();
     if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) {
       throw new Error('Укажи корректную электронную почту в форме входа.');
     }
+    if (cfg.enableAuthCaptcha === true && !String(captchaToken || '').trim()) {
+      throw new Error('Пройди проверку безопасности перед восстановлением пароля.');
+    }
     const { error } = await c.auth.resetPasswordForEmail(cleanEmail, {
-      redirectTo: `${location.origin}${location.pathname}`
+      redirectTo: `${location.origin}${location.pathname}`,
+      captchaToken: String(captchaToken || '')
     });
     if (error) throw error;
     return true;
