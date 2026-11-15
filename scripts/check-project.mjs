@@ -419,12 +419,12 @@ check(Boolean(signinSource) &&
   signinSource.includes('cfg.enableAuthCaptcha === true') &&
   signinSource.includes('captchaToken') &&
   signinSource.includes('signInWithPassword'),
-  'Password sign-in must pass a CAPTCHA token whenever Supabase Auth CAPTCHA is enabled.');
+  'Password sign-in must pass CAPTCHA when Auth CAPTCHA is active.');
 check(Boolean(resetSource) &&
   resetSource.includes('cfg.enableAuthCaptcha === true') &&
   resetSource.includes('captchaToken') &&
   resetSource.includes('resetPasswordForEmail'),
-  'Password recovery must pass a CAPTCHA token whenever Supabase Auth CAPTCHA is enabled.');
+  'Password recovery must pass CAPTCHA when Auth CAPTCHA is active.');
 check(cloud.includes(".select('display_name,preferred_language,school_id,grade_label,account_type')") &&
   cloud.includes(".select('display_name,preferred_language,school_id,grade_label')") &&
   cloud.includes("accountType:data.account_type||'tester'"),
@@ -434,11 +434,11 @@ const browserConfig = read('supabase-config.js');
 check(browserConfig.includes('enableAuthCaptcha: false') &&
   browserConfig.includes('enableSelfServiceSignup: false') &&
   browserConfig.includes('turnstileSiteKey: ""'),
-  'Public signup and CAPTCHA must remain off by default until the adult owner configures the provider.');
+  'Self-service signup and CAPTCHA must remain off by default until the adult owner configures the provider.');
 
 const authModalStart = app.indexOf('function loginModal(){');
-const electionModalStart = app.indexOf('function passwordRecoveryModal', authModalStart);
-const authModalSource = authModalStart >= 0 && electionModalStart > authModalStart ? app.slice(authModalStart, electionModalStart) : '';
+const recoveryModalStart = app.indexOf('function passwordRecoveryModal', authModalStart);
+const authModalSource = authModalStart >= 0 && recoveryModalStart > authModalStart ? app.slice(authModalStart, recoveryModalStart) : '';
 check(authModalSource.includes('Тестировщик') && authModalSource.includes('Сыноочу') &&
   authModalSource.includes('name="privacyAck"') &&
   authModalSource.includes('enableAuthCaptcha') &&
@@ -446,7 +446,7 @@ check(authModalSource.includes('Тестировщик') && authModalSource.incl
   authModalSource.includes('authTurnstile') &&
   authModalSource.includes('turnstile.render') &&
   !authModalSource.includes('name="role"'),
-  'Auth UI must support RU/KG tester onboarding, show Turnstile when configured, and never offer a role selector.');
+  'Auth UI must support RU/KG tester onboarding, Turnstile and no public role selector.');
 check(app.includes('testerBadge') && app.includes('adminBadge') &&
   app.includes('window.YntymakCloud?.isAdmin?.()'),
   'Profile must distinguish testers from server-verified administrators.');
@@ -462,13 +462,15 @@ for (const language of ['RU','KG']) {
     (title,body)=>{ rendered={title,body}; },
     ()=>{}
   );
+  const inviteOnlyNotice = language==='KG'
+    ? 'Өз алдынча катталуу азырынча жабык'
+    : 'Самостоятельная регистрация пока закрыта';
   check(Boolean(rendered) && rendered.body.includes('id="loginForm"') &&
-    rendered.body.includes('Самостоятельная регистрация пока закрыта') ||
-    rendered.body.includes('Өз алдынча катталуу азырынча жабык'),
+    rendered.body.includes(inviteOnlyNotice),
     `Rendered ${language} auth modal must show login and invitation-only tester onboarding by default.`);
   check(!rendered.body.includes('id="signupForm"') &&
     !rendered.body.includes('name="role"'),
-    `Rendered ${language} auth modal must not expose open signup or role assignment by default.`);
+    `Rendered ${language} auth modal must not expose public signup or role assignment by default.`);
 }
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');
 check(matrix.includes('20261115_elections_foundation.sql'),
