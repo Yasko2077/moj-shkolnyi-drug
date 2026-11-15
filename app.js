@@ -149,7 +149,21 @@ $('#pageContent').addEventListener('click',e=>{
 $('#modalRoot').addEventListener('click',e=>{if(e.target.matches('[data-close-modal]')||e.target.matches('[data-backdrop]'))closeModal();const aiOk=e.target.closest('[data-ai-consent]');if(aiOk){state.aiConsent=true;const q=state.pendingQuestion;state.pendingQuestion='';closeModal();sendChat(q);return;}const aiLocal=e.target.closest('[data-ai-local]');if(aiLocal){const q=state.pendingQuestion;state.pendingQuestion='';closeModal();sendChat(q,true);return;}const nm=e.target.closest('[data-nominate]');if(nm){nominate(nm.dataset.nominate);return;}const cast=e.target.closest('[data-cast-vote]');if(cast){const el=db.elections.find(x=>x.id===cast.dataset.castVote);if(!el||el.stage!=='voting'||el.myVote)return;const c=el.candidates.find(x=>x.id===cast.dataset.candidate&&x.status==='approved');if(!c)return;el.myVote=c.id;c.votes=(c.votes||0)+1;persist();closeModal();render();toast('Тестовый голос сохранён локально.');}});
 document.addEventListener('submit',async e=>{
  const f=e.target;
- if(f.id==='ideaForm'){e.preventDefault();const d=new FormData(f);db.ideas.unshift({id:'IDEA-'+Date.now(),title:d.get('title').trim(),description:d.get('description').trim(),category:d.get('category'),scope:d.get('scope'),target:d.get('target').trim(),district:'',status:'review',created:new Date().toISOString().slice(0,10),author:db.profile.name,support:0,response:'',comments:[]});persist();closeModal();go('ideas');toast('Предложение передано на внутреннюю модерацию.');}
+ if(f.id==='ideaForm'){
+  e.preventDefault();
+  const d=new FormData(f);
+  const payload={title:d.get('title').trim(),description:d.get('description').trim(),category:d.get('category'),scope:d.get('scope'),target:d.get('target').trim(),district:db.profile.district||''};
+  if(window.YntymakCloud?.initiativesEnabled() && window.YntymakCloud?.getSession()){
+   try{
+    const saved=await window.YntymakCloud.createInitiative(payload);
+    db.ideas.unshift({id:saved.id,title:saved.title,description:saved.description,category:saved.category,scope:saved.scope,target:saved.target_label||payload.target,district:saved.district_key||'',status:'review',created:String(saved.created_at).slice(0,10),author:'Ты',support:0,response:'',comments:[],source:'cloud'});
+    persist();closeModal();go('ideas');toast('Предложение сохранено в облаке и отправлено на проверку.');
+   }catch(err){toast(err.message||'Не удалось отправить предложение в облако.');}
+   return;
+  }
+  db.ideas.unshift({id:'IDEA-'+Date.now(),...payload,district:payload.district,status:'review',created:new Date().toISOString().slice(0,10),author:db.profile.name,support:0,response:'',comments:[]});
+  persist();closeModal();go('ideas');toast('Предложение сохранено только в этом браузере (демо).');
+ }
  if(f.id==='projectForm'){e.preventDefault();const d=new FormData(f);db.projects.unshift({id:'PR-'+Date.now(),title:d.get('title').trim(),description:d.get('description').trim(),category:d.get('category'),scope:d.get('scope'),target:d.get('target').trim(),district:'',stage:'team',owner:db.profile.name,members:1,created:new Date().toISOString().slice(0,10),tasks:[d.get('firstTask').trim(),'Согласовать план с куратором','Проверить результат']});persist();closeModal();go('projects');toast('Проект создан в тестовом браузере.');}
  if(f.id==='candidateForm'){e.preventDefault();const d=new FormData(f),el=db.elections.find(x=>x.id===f.dataset.election);if(!el||el.stage!=='nominations')return;el.candidates.push({id:'C-'+Date.now(),name:d.get('name').trim(),program:d.get('program').trim(),status:'pending'});persist();closeModal();render();toast('Заявка кандидата отправлена на проверку. Взнос не предусмотрен.');}
  if(f.id==='registrationForm'){e.preventDefault();const d=new FormData(f),el=db.events.find(x=>x.id===f.dataset.event);if(!el||el.registered>=el.capacity)return;if(db.registrations.some(x=>x.eventId===el.id&&x.owner==='local-profile')){toast('Ты уже зарегистрирован(а) на это событие.');return;}db.registrations.push({id:'REG-'+Date.now(),eventId:el.id,eventTitle:el.title,name:d.get('name').trim(),school:d.get('school').trim(),grade:d.get('grade').trim(),owner:'local-profile',status:'Подтверждена в демо'});el.registered++;persist();closeModal();render();toast('Заявка зарегистрирована в локальном демо.');}
@@ -169,6 +183,18 @@ $('#mobileMenu').addEventListener('click',()=>$('#sidebar').classList.toggle('op
 document.addEventListener('click',e=>{const p=e.target.closest('[data-page]');if(p&&!$('#pageContent').contains(p))go(p.dataset.page);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 $('#pageContent').addEventListener('input',e=>{if(['ideaSearch','ideaScope','ideaStatus'].includes(e.target.id)){const q=($('#ideaSearch')?.value||'').toLowerCase(),scope=$('#ideaScope')?.value||'all',status=$('#ideaStatus')?.value||'all';$$('#ideaList .idea-card').forEach((el,i)=>{const item=db.ideas.filter(x=>x.status!=='review'||state.realAdmin)[i];el.hidden=!(item&&item.title.toLowerCase().includes(q)&&(scope==='all'||item.scope===scope)&&(status==='all'||item.status===status));});}});
-if(window.YntymakCloud?.configured()){window.YntymakCloud.init().then(result=>{state.admin=!!result.isAdmin;state.realAdmin=!!result.isAdmin;render();}).catch(e=>console.warn('Supabase initialization:',e.message));}
+if(window.YntymakCloud?.configured()){
+ window.YntymakCloud.init().then(async result=>{
+  state.admin=!!result.isAdmin;state.realAdmin=!!result.isAdmin;
+  if(window.YntymakCloud.initiativesEnabled() && result.session){
+   try{
+    const cloudIdeas=await window.YntymakCloud.listInitiatives();
+    const localIdeas=db.ideas.filter(x=>x.source!=='cloud');
+    db.ideas=[...cloudIdeas,...localIdeas];
+   }catch(e){console.warn('Cloud initiatives unavailable:',e.message);}
+  }
+  render();
+ }).catch(e=>console.warn('Supabase initialization:',e.message));
+}
 render();
 })();
