@@ -132,12 +132,6 @@ check(eventRegistrationPatch.includes("participant_name=v_display_name") &&
   'Event registration should use the server-derived profile name and update cancelled records safely.');
 check(eventRosterPatch.includes('r.organizer_access_consent is true'),
   'Event roster must include only participants who consented to organizer access.');
-check(cloud.includes('p_organizer_access_consent:organizerAccessConsent') &&
-  cloud.includes('organizerAccessConsent!==true'),
-  'Cloud client must require event-specific organizer-access consent.');
-check(app.includes('name="organizerAccessConsent"') &&
-  app.includes("organizerAccessConsent:d.get('organizerAccessConsent')==='on'"),
-  'Cloud event registration UI must require a separate organizer-access checkbox.');
 
 const profilePatch = read('supabase/patches/20261115_profile_school_integrity.sql');
 check(profilePatch.includes('grant update(display_name, preferred_language, grade_label) on public.profiles'),
@@ -147,6 +141,13 @@ check(!profilePatch.includes('grant update(school_id'),
 
 const cloud = read('cloud.js');
 const app = read('app.js');
+check(cloud.includes('p_organizer_access_consent:organizerAccessConsent') &&
+  cloud.includes('organizerAccessConsent!==true'),
+  'Cloud client must require event-specific organizer-access consent.');
+check(app.includes('name="organizerAccessConsent"') &&
+  app.includes("organizerAccessConsent:d.get('organizerAccessConsent')==='on'"),
+  'Cloud event registration UI must require a separate organizer-access checkbox.');
+
 check(cloud.includes('async function listElectionCandidateApplications(') && cloud.includes('async function listElectionObjections('),
   'Cloud client moderation queue methods are missing.');
 check(cloud.includes('publicNameConsent!==true||publicProgramConsent!==true'),
