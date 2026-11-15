@@ -176,21 +176,21 @@ begin
 end $function$;
 
 create or replace function public.submit_election_candidate(p_election_id uuid,p_program text)
-returns uuid language plpgsql security definer set search_path=public,pg_temp as function$
+returns uuid language plpgsql security definer set search_path=public,pg_temp as '
 declare v_id uuid; v_e public.elections%rowtype; v_school uuid; v_display_name text;
 begin
- if auth.uid() is null then raise exception 'not_authenticated'; end if;
+ if auth.uid() is null then raise exception ''not_authenticated''; end if;
  select * into v_e from public.elections where id=p_election_id for update;
- if not found or v_e.stage<>'nominations' or now()<v_e.nominations_open_at or now()>=v_e.nominations_close_at then raise exception 'nominations_closed'; end if;
+ if not found or v_e.stage<>''nominations'' or now()<v_e.nominations_open_at or now()>=v_e.nominations_close_at then raise exception ''nominations_closed''; end if;
  select school_id,display_name into v_school,v_display_name from public.profiles where id=auth.uid();
- if v_e.scope='school' and v_school is distinct from v_e.school_id then raise exception 'candidate_school_mismatch'; end if;
- if v_e.scope='district' and not exists(select 1 from public.schools s where s.id=v_school and s.district_key=v_e.district_key) then raise exception 'candidate_district_mismatch'; end if;
- if not exists(select 1 from public.election_eligibility where election_id=p_election_id and user_id=auth.uid()) then raise exception 'candidate_not_eligible'; end if;
+ if v_e.scope=''school'' and v_school is distinct from v_e.school_id then raise exception ''candidate_school_mismatch''; end if;
+ if v_e.scope=''district'' and not exists(select 1 from public.schools s where s.id=v_school and s.district_key=v_e.district_key) then raise exception ''candidate_district_mismatch''; end if;
+ if not exists(select 1 from public.election_eligibility where election_id=p_election_id and user_id=auth.uid()) then raise exception ''candidate_not_eligible''; end if;
  insert into public.election_candidates(election_id,user_id,display_name,program)
  values(p_election_id,auth.uid(),v_display_name,trim(p_program)) returning id into v_id;
- insert into public.election_audit_log(election_id,actor_id,action) values(p_election_id,auth.uid(),'candidate_submitted');
+ insert into public.election_audit_log(election_id,actor_id,action) values(p_election_id,auth.uid(),''candidate_submitted'');
  return v_id;
-end $function$;
+';
 
 create or replace function public.review_election_candidate(p_candidate_id uuid,p_decision text,p_note text default null)
 returns void language plpgsql security definer set search_path=public,pg_temp as $function$
@@ -272,18 +272,18 @@ begin
 end $function$;
 
 create or replace function public.review_election_objection(p_objection_id uuid,p_decision text,p_resolution text)
-returns void language plpgsql security definer set search_path=public,pg_temp as function$
+returns void language plpgsql security definer set search_path=public,pg_temp as '
 declare v_election uuid;
 begin
- if auth.uid() is null or not public.is_verification_representative() then raise exception 'objection_review_forbidden'; end if;
- if p_decision not in ('resolved','dismissed') or char_length(trim(coalesce(p_resolution,'')))<10 then raise exception 'invalid_objection_resolution'; end if;
- select election_id into v_election from public.election_objections where id=p_objection_id and status in ('submitted','under_review') for update;
- if not found then raise exception 'objection_not_pending'; end if;
+ if auth.uid() is null or not public.is_verification_representative() then raise exception ''objection_review_forbidden''; end if;
+ if p_decision not in (''resolved'',''dismissed'') or char_length(trim(coalesce(p_resolution,'''')))<10 then raise exception ''invalid_objection_resolution''; end if;
+ select election_id into v_election from public.election_objections where id=p_objection_id and status in (''submitted'',''under_review'') for update;
+ if not found then raise exception ''objection_not_pending''; end if;
  update public.election_objections set status=p_decision,resolution=left(trim(p_resolution),2000),reviewed_by=auth.uid(),reviewed_at=now()
  where id=p_objection_id;
  insert into public.election_audit_log(election_id,actor_id,action,details)
- values(v_election,auth.uid(),'objection_reviewed',jsonb_build_object('objection_id',p_objection_id,'decision',p_decision));
- end $function$;
+ values(v_election,auth.uid(),''objection_reviewed'',jsonb_build_object(''objection_id'',p_objection_id,''decision'',p_decision));
+';
 
 create or replace function public.get_my_election_receipt(p_election_id uuid)
 returns boolean language sql stable security definer set search_path=public,pg_temp as $function$
