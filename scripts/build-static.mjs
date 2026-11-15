@@ -29,11 +29,15 @@ if (supabaseUrl) {
 }
 
 const enableAuthCaptcha = truthy(process.env.YNTYMAK_ENABLE_AUTH_CAPTCHA);
+const requestSelfServiceSignup = truthy(process.env.YNTYMAK_ENABLE_SELF_SERVICE_SIGNUP);
 const turnstileSiteKey = String(process.env.YNTYMAK_TURNSTILE_SITE_KEY || "").trim();
-if (enableAuthCaptcha && !turnstileSiteKey) {
-  throw new Error("YNTYMAK_TURNSTILE_SITE_KEY is required when Auth CAPTCHA is enabled.");
+if (enableAuthCaptcha && (!supabaseUrl || !publishableKey || !turnstileSiteKey)) {
+  throw new Error("Auth CAPTCHA requires a separate staging Supabase project and YNTYMAK_TURNSTILE_SITE_KEY.");
 }
-const enableSelfServiceSignup = enableAuthCaptcha && truthy(process.env.YNTYMAK_ENABLE_SELF_SERVICE_SIGNUP);
+if (requestSelfServiceSignup && !enableAuthCaptcha) {
+  throw new Error("Self-service signup cannot be enabled without Auth CAPTCHA.");
+}
+const enableSelfServiceSignup = enableAuthCaptcha && requestSelfServiceSignup;
 
 const browserConfig = {
   supabaseUrl,
