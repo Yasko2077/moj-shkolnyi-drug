@@ -12,6 +12,28 @@ alter table public.events
   add column if not exists district_key text check (district_key is null or district_key in ('lenin','pervomai','oktyabr','sverdlov')),
   add column if not exists updated_at timestamptz not null default now();
 
+
+-- Close the legacy event access paths before replacing their RPC contracts.
+-- The new scoped creation/registration/roster RPCs are granted by later patches in this sequence.
+drop policy if exists event_registrations_insert_self on public.event_registrations;
+drop policy if exists event_registrations_read_owner_or_organizer on public.event_registrations;
+drop policy if exists event_registrations_read_self on public.event_registrations;
+create policy event_registrations_read_self
+  on public.event_registrations for select to authenticated
+  using (user_id = (select auth.uid()));
+
+revoke all privileges on table public.event_registrations from anon, authenticated;
+revoke insert (
+  event_id,user_id,participant_name,school_label,grade_label,
+  participation_format,team_name,public_name_consent,status
+) on public.event_registrations from anon, authenticated;
+revoke update (
+  event_id,user_id,participant_name,school_label,grade_label,
+  participation_format,team_name,public_name_consent,status
+) on public.event_registrations from anon, authenticated;
+grant select on public.event_registrations to authenticated;
+revoke all on function public.get_event_roster(text) from public, anon, authenticated;
+
 create or replace function public.create_platform_event(
   p_event_key text, p_title text, p_description text, p_event_date date,
   p_place_label text, p_capacity integer, p_scope text, p_target_label text, p_district_key text default null
@@ -53,9 +75,10 @@ begin
   return v_id;
 end $$;
 
-revoke all on function public.create_platform_event(text,text,text,date,text,integer,text,text,text) from public,anon;
-grant execute on function public.create_platform_event(text,text,text,date,text,integer,text,text,text) to authenticated;
-revoke all on function public.register_for_event(uuid,text,text,text,text,text) from public,anon;
-grant execute on function public.register_for_event(uuid,text,text,text,text,text) to authenticated;
+-- Keep both transitional RPCs inaccessible until their scoped replacements are installed.
+revoke all on function public.create_platform_event(text,text,text,date,text,integer,text,text,text)
+  from public,anon,authenticated;
+revoke all on function public.register_for_event(uuid,text,text,text,text,text)
+  from public,anon,authenticated;
 
 comment on function public.register_for_event(uuid,text,text,text,text,text) is 'Authenticated self-registration; enforces event capacity and one active registration per user.';
