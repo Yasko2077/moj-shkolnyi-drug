@@ -81,14 +81,15 @@ function favoriteItem(item){if(!item)return '';return item.type==='idea'?db.idea
 function updateShell(){
  document.documentElement.lang=state.lang==='KG'?'ky':'ru';
  const p=db.profile,session=window.YntymakCloud?.getSession();
+ const stagingConnected=Boolean(window.YntymakCloud?.configured() && window.YntymakCloud?.initiativesEnabled());
  $('#sidebarName').textContent=p.name||'Гость';
- $('#sidebarMeta').textContent=session?(state.realAdmin?'Администратор':'Тестировщик'):(p.school||'Демо-профиль');
+ $('#sidebarMeta').textContent=session?(state.realAdmin?'Администратор':'Тестировщик'):stagingConnected?'Вход по приглашению':(p.school||'Демо-профиль');
  $('#sidebarAvatar').textContent=initials(p.name);
  $('#topAvatar').textContent=initials(p.name);
  $('#crumb').textContent=state.page==='workspace'?t('workspace'):(pageNames[state.page]||'Ынтымак');
  $('#ideaCount').textContent=db.ideas.filter(x=>x.status==='open').length;
- $('#environmentLabel').textContent=state.realAdmin?'ЫНТЫМАК · ПОДТВЕРЖДЁННЫЙ АДМИНИСТРАТОР':session?'ЫНТЫМАК · АККАУНТ ТЕСТИРОВЩИКА':'ЫНТЫМАК · ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР';
- $('#modeLabel').textContent=state.realAdmin?'Администратор · модули в тестировании':session?'Тестировщик · облачный вход':'Демо-режим';
+ $('#environmentLabel').textContent=state.realAdmin?'ЫНТЫМАК · ПОДТВЕРЖДЁННЫЙ АДМИНИСТРАТОР':session?'ЫНТЫМАК · АККАУНТ ТЕСТИРОВЩИКА':stagingConnected?'ЫНТЫМАК · ТЕСТОВАЯ БАЗА ПОДКЛЮЧЕНА':'ЫНТЫМАК · ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР';
+ $('#modeLabel').textContent=state.realAdmin?'Администратор · модули в тестировании':session?'Тестировщик · облачный вход':stagingConnected?'Тестовая база · вход по приглашению':'Демо-режим';
  $('#authButton').textContent=session?'Аккаунт / профиль':t('login');
  $('#signOutButton').hidden=!session;
  $('#adminNav').hidden=!state.realAdmin;
@@ -98,13 +99,14 @@ function updateShell(){
 }
 function home(){
  const kg=state.lang==='KG';
+ const stagingConnected=Boolean(window.YntymakCloud?.configured() && window.YntymakCloud?.initiativesEnabled());
  const t=kg?{
   eyebrow:'БИШКЕК · ОКУУЧУЛАРДЫН ӨЗҮН-ӨЗҮ БАШКАРУУСУ',
   title:'Шаар окуучулар катышканда өзгөрөт.',
   intro:'Ынтымак — Бишкектеги мектеп окуучулары үчүн бирдиктүү мейкиндик. Идея сунушта, команда түз, долбоорлорго жана иш-чараларга катыш.',
-  join:'Тестирлөөгө кошулуу',explore:'Мүмкүнчүлүктөрдү көрүү',
+  join:stagingConnected?'Чакыруу менен кирүү':'Тестирлөөгө кошулуу',explore:'Мүмкүнчүлүктөрдү көрүү',
   status:'СЫНОО ВЕРСИЯСЫ',statusTitle:'Ынтымакты бирге текшеребиз',
-  statusText:'Азыр бул жерде демонстрациялык мисалдар көрсөтүлөт. Жаңы аккаунт «Сыноочу» макамын алат; администратор укуктары өзүнчө дайындалат.',
+  statusText:stagingConnected?'Тесттик база туташты. Кирүү жеке чакыруу менен жүргүзүлөт; аккаунт «Сыноочу» макамын алат, администратор укуктары өзүнчө дайындалат.':'Азыр бул жерде демонстрациялык мисалдар көрсөтүлөт. Жаңы аккаунт «Сыноочу» макамын алат; администратор укуктары өзүнчө дайындалат.',
   facts:[['4','Бишкек району'],['2','тил: RU / KG'],['1','окуучулар платформасы']],
   featuresTitle:'Окуучулар үчүн бирдиктүү мейкиндик',
   featuresIntro:'Мектептеги демилгеден шаардык кызматташууга чейин.',
@@ -125,9 +127,9 @@ function home(){
   eyebrow:'БИШКЕК · УЧЕНИЧЕСКОЕ САМОУПРАВЛЕНИЕ',
   title:'Город меняется, когда ученики участвуют.',
   intro:'Ынтымак — единое пространство для школьников Бишкека. Предлагай идеи, собирай команды, участвуй в проектах и школьных событиях.',
-  join:'Присоединиться к тестированию',explore:'Посмотреть возможности',
+  join:stagingConnected?'Войти по приглашению':'Присоединиться к тестированию',explore:'Посмотреть возможности',
   status:'ТЕСТОВАЯ ВЕРСИЯ',statusTitle:'Создаём Ынтымак вместе',
-  statusText:'Сейчас в интерфейсе показаны демонстрационные примеры. Новый аккаунт получает статус «Тестировщик», а права администратора назначаются отдельно.',
+  statusText:stagingConnected?'Тестовая база подключена. Вход доступен по персональному приглашению; аккаунт получает статус «Тестировщик», а права администратора назначаются отдельно.':'Сейчас в интерфейсе показаны демонстрационные примеры. Новый аккаунт получает статус «Тестировщик», а права администратора назначаются отдельно.',
   facts:[['4','района Бишкека'],['2','языка: RU / KG'],['1','городская платформа']],
   featuresTitle:'Всё для ученического участия',
   featuresIntro:'От инициативы в своей школе до сотрудничества по всему городу.',
