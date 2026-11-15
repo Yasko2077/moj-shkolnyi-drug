@@ -42,4 +42,5 @@ done
 
 psql -v ON_ERROR_STOP=1 -f supabase/tests/verify_security_grants.sql
 psql -v ON_ERROR_STOP=1 -f supabase/tests/smoke_event_security.psql
-echo "Fresh PostgreSQL 17 bootstrap, ordered migrations, ACL checks, and event scenarios passed."
+psql -v ON_ERROR_STOP=1 -f supabase/tests/smoke_project_membership.psql
+echo "Fresh PostgreSQL 17 bootstrap, ordered migrations, ACL checks, event scenarios, and project membership scenarios passed."
