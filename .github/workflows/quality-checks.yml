@@ -31,6 +31,10 @@ jobs:
           node-version: 22
       - name: Validate JavaScript, cloud flags, profiles, and election safeguards
         run: node scripts/check-project.mjs
+      - name: Build allow-listed static website
+        run: node scripts/build-static.mjs
+      - name: Verify public bundle excludes private project materials
+        run: node scripts/check-static-build.mjs
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
