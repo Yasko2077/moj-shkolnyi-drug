@@ -90,6 +90,19 @@ check(election.includes("and auth.uid() is not null"),
 check(!election.includes('insert into public.election_voter_receipts(election_id,user_id,ballot_id)'),
   'Vote receipt must not store a ballot identifier.');
 
+const indexPatch = read('supabase/patches/20261115_fk_indexes.sql');
+for (const indexName of [
+  'event_registrations_user_id_idx',
+  'profiles_school_id_idx',
+  'role_assignments_school_id_idx',
+  'role_assignments_verified_by_idx',
+  'role_requests_requested_role_key_idx',
+  'role_requests_reviewed_by_idx',
+  'role_requests_school_id_idx'
+]) {
+  check(indexPatch.includes(indexName), `Missing baseline foreign-key index: ${indexName}`);
+}
+
 const profilePatch = read('supabase/patches/20261115_profile_school_integrity.sql');
 check(profilePatch.includes('grant update(display_name, preferred_language, grade_label) on public.profiles'),
   'Profile self-update must be restricted to display name, language, and grade.');
