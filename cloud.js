@@ -118,7 +118,9 @@
     if (scope === 'district' && !['lenin','pervomai','oktyabr','sverdlov'].includes(district)) {
       throw new Error('Для районного предложения выбери один из четырёх районов.');
     }
-    const { data: profile } = await c.from('profiles').select('school_id').eq('id', session.user.id).maybeSingle();
+    const { data: profile, error: profileError } = await c.from('profiles').select('school_id').eq('id', session.user.id).maybeSingle();
+    if (profileError) throw profileError;
+    if (scope === 'school' && !profile?.school_id) throw new Error('Школа в профиле ещё не подтверждена. Пока можно отправить районное или городское предложение.');
     const row = {
       created_by: session.user.id,
       title: cleanTitle,
@@ -225,7 +227,10 @@
     const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт для просмотра мероприятий.');
     const {data,error}=await c.from('events').select('id,event_key,title,is_open,description,event_date,place_label,capacity,scope,target_label,district_key').order('event_date',{ascending:true});
     if(error) throw error;
-    return (data||[]).map(e=>({id:e.id,title:e.title,description:e.description||'',date:e.event_date||'',place:e.place_label||'',capacity:e.capacity||40,registered:0,status:e.is_open?'open':'closed',scope:e.scope||'city',target:e.target_label||'Бишкек',category:e.event_key,source:'cloud'}));
+    const {data:counts,error:countError}=await c.rpc('get_event_registration_counts');
+    if(countError) throw countError;
+    const countMap=new Map((counts||[]).map(x=>[x.event_id,Number(x.registered_count)]));
+    return (data||[]).map(e=>({id:e.id,title:e.title,description:e.description||'',date:e.event_date||'',place:e.place_label||'',capacity:e.capacity||40,registered:countMap.get(e.id)||0,status:e.is_open?'open':'closed',scope:e.scope||'city',target:e.target_label||'Бишкек',category:e.event_key,source:'cloud'}));
   }
   async function createEvent({title,description,date,place,capacity,scope='city',target='Бишкек',district='',category='forum'}) {
     const c=getClient(); if(!c||!session) throw new Error('Нет активной сессии.');
