@@ -403,9 +403,13 @@
     const {data,error}=await c.rpc('set_election_eligibility',{p_election_id:electionId,p_user_ids:userIds});
     if(error) throw error; return data;
   }
-  async function submitElectionCandidate(electionId,program) {
+  async function submitElectionCandidate(electionId,program,{publicNameConsent=false,publicProgramConsent=false}={}) {
     const c=requireElections();
-    const {data,error}=await c.rpc('submit_election_candidate',{p_election_id:electionId,p_program:program});
+    if(publicNameConsent!==true||publicProgramConsent!==true) throw new Error('Для публичной кандидатуры нужны отдельные подтверждения публикации имени и программы.');
+    const {data,error}=await c.rpc('submit_election_candidate',{
+      p_election_id:electionId,p_program:program,
+      p_public_name_consent:publicNameConsent,p_public_program_consent:publicProgramConsent
+    });
     if(error) throw error; return data;
   }
   async function listElectionCandidateApplications(electionId) {
