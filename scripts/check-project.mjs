@@ -115,6 +115,30 @@ check(eventCreatorPatch.includes('revoke all on function public.create_platform_
   eventRosterPatch.includes('revoke all on function public.get_event_roster(uuid)'),
   'Event creation and roster functions must revoke public/anonymous access.');
 
+const eventRegistrationPatch = read('supabase/patches/20261115_event_registration_consent.sql');
+check(eventRegistrationPatch.includes('organizer_access_consent boolean not null default false') &&
+  eventRegistrationPatch.includes('organizer_access_consent_at timestamptz'),
+  'Event organizer-access consent must be stored separately and default to false.');
+check(eventRegistrationPatch.includes('register_for_event(uuid,boolean)') &&
+  eventRegistrationPatch.includes('organizer_access_consent_required'),
+  'Cloud event registration must require explicit organizer-access consent.');
+check(eventRegistrationPatch.includes('from public.profiles p') &&
+  eventRegistrationPatch.includes('from public.schools s'),
+  'Event registration must derive identity and school from trusted profile data.');
+check(eventRegistrationPatch.includes('event_requires_verified_school_in_district'),
+  'District event registration must verify the participant school district.');
+check(eventRegistrationPatch.includes("set participant_name=v_display_name") &&
+  eventRegistrationPatch.includes("set status='registered'") === false,
+  'Event registration should use the server-derived profile name and update cancelled records safely.');
+check(eventRosterPatch.includes('r.organizer_access_consent is true'),
+  'Event roster must include only participants who consented to organizer access.');
+check(cloud.includes('p_organizer_access_consent:organizerAccessConsent') &&
+  cloud.includes('organizerAccessConsent!==true'),
+  'Cloud client must require event-specific organizer-access consent.');
+check(app.includes('name="organizerAccessConsent"') &&
+  app.includes("organizerAccessConsent:d.get('organizerAccessConsent')==='on'"),
+  'Cloud event registration UI must require a separate organizer-access checkbox.');
+
 const profilePatch = read('supabase/patches/20261115_profile_school_integrity.sql');
 check(profilePatch.includes('grant update(display_name, preferred_language, grade_label) on public.profiles'),
   'Profile self-update must be restricted to display name, language, and grade.');
