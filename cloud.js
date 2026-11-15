@@ -326,13 +326,17 @@
   }
   async function createNews({title,text,category}) {
     const c=getClient(); if(!c||!session?.user||!isAdmin) throw new Error('Публикация доступна только подтверждённому администратору.');
-    const row={created_by:session.user.id,title:String(title||'').trim(),body:String(text||'').trim(),category:String(category||'Объявление').trim(),is_published:false};
-    if(row.title.length<5||row.title.length>110||row.body.length<15||row.body.length>900) throw new Error('Проверь длину заголовка и текста.');
-    const {data,error}=await c.from('news_posts').insert(row).select('id').single();
+    const cleanTitle=String(title||'').trim();
+    const cleanBody=String(text||'').trim();
+    const cleanCategory=String(category||'Объявление').trim();
+    if(cleanTitle.length<5||cleanTitle.length>110||cleanBody.length<15||cleanBody.length>900||cleanCategory.length<2||cleanCategory.length>40) {
+      throw new Error('Проверь длину заголовка, текста и категории.');
+    }
+    const {data,error}=await c.rpc('publish_news_post',{
+      p_title:cleanTitle,p_body:cleanBody,p_category:cleanCategory
+    });
     if(error) throw error;
-    const {error:updateError}=await c.from('news_posts').update({is_published:true}).eq('id',data.id);
-    if(updateError) throw updateError;
-    return data.id;
+    return data;
   }
   async function listPolls() {
     const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт.');
