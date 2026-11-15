@@ -316,6 +316,75 @@
     const {error}=await c.rpc('cast_poll_vote',{p_poll_id:pollId,p_option_id:optionId});
     if(error) throw error;
   }
+  function requireElections() {
+    const c=getClient();
+    if(!cfg.enableCloudElections||!c||!session) throw new Error('Облачный модуль выборов пока не включён.');
+    return c;
+  }
+  async function listElections() {
+    const c=requireElections();
+    const {data,error}=await c.from('elections').select('id,title,position_label,description,scope,school_id,district_key,rules_text,nominations_open_at,nominations_close_at,campaign_close_at,voting_open_at,voting_close_at,stage').order('created_at',{ascending:false}).limit(100);
+    if(error) throw error;
+    const out=[];
+    for(const e of data||[]) out.push({...e,candidates:await getElectionCandidates(e.id),hasVoted:await getMyElectionReceipt(e.id)});
+    return out;
+  }
+  async function getElectionCandidates(electionId) {
+    const c=requireElections();
+    const {data,error}=await c.rpc('get_election_public_candidates',{p_election_id:electionId});
+    if(error) throw error; return data||[];
+  }
+  async function getMyElectionReceipt(electionId) {
+    const c=requireElections();
+    const {data,error}=await c.rpc('get_my_election_receipt',{p_election_id:electionId});
+    if(error) throw error; return data===true;
+  }
+  async function createElection(payload) {
+    const c=requireElections(); if(!isAdmin) throw new Error('Создавать выборы может только подтверждённый представитель.');
+    const {data,error}=await c.rpc('create_election',{
+      p_title:payload.title,p_position_label:payload.positionLabel,p_description:payload.description||'',
+      p_scope:payload.scope,p_school_id:payload.schoolId||null,p_district_key:payload.districtKey||null,
+      p_rules_text:payload.rulesText,p_nominations_open_at:payload.nominationsOpenAt,
+      p_nominations_close_at:payload.nominationsCloseAt,p_campaign_close_at:payload.campaignCloseAt,
+      p_voting_open_at:payload.votingOpenAt,p_voting_close_at:payload.votingCloseAt
+    });
+    if(error) throw error; return data;
+  }
+  async function setElectionEligibility(electionId,userIds) {
+    const c=requireElections(); if(!isAdmin) throw new Error('Управлять списком допуска может только подтверждённый представитель.');
+    const {data,error}=await c.rpc('set_election_eligibility',{p_election_id:electionId,p_user_ids:userIds});
+    if(error) throw error; return data;
+  }
+  async function submitElectionCandidate(electionId,displayName,program) {
+    const c=requireElections();
+    const {data,error}=await c.rpc('submit_election_candidate',{p_election_id:electionId,p_display_name:displayName,p_program:program});
+    if(error) throw error; return data;
+  }
+  async function reviewElectionCandidate(candidateId,decision,note='') {
+    const c=requireElections(); if(!isAdmin) throw new Error('Проверка кандидатов доступна только подтверждённому представителю.');
+    const {error}=await c.rpc('review_election_candidate',{p_candidate_id:candidateId,p_decision:decision,p_note:note});
+    if(error) throw error;
+  }
+  async function advanceElectionStage(electionId,nextStage,reason) {
+    const c=requireElections(); if(!isAdmin) throw new Error('Управлять этапами может только подтверждённый представитель.');
+    const {error}=await c.rpc('advance_election_stage',{p_election_id:electionId,p_next_stage:nextStage,p_reason:reason});
+    if(error) throw error;
+  }
+  async function castElectionVote(electionId,candidateId) {
+    const c=requireElections();
+    const {error}=await c.rpc('cast_election_vote',{p_election_id:electionId,p_candidate_id:candidateId});
+    if(error) throw error;
+  }
+  async function getElectionResults(electionId) {
+    const c=requireElections();
+    const {data,error}=await c.rpc('get_election_results',{p_election_id:electionId});
+    if(error) throw error; return data||[];
+  }
+  async function submitElectionObjection(electionId,category,description) {
+    const c=requireElections();
+    const {data,error}=await c.rpc('submit_election_objection',{p_election_id:electionId,p_category:category,p_description:description});
+    if(error) throw error; return data;
+  }
   async function askHostedAI(message, language = 'ru', history = []) {
     const c = getClient();
     if (!cfg.enableHostedAI || !c || !session) throw new Error('Внешняя ИИ-модель не подключена. Доступен локальный помощник.');
@@ -327,12 +396,13 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, checkAdmin, listActiveSchools, assignProfileSchool, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, getProjectMemberCounts, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, askHostedAI,
+    ensureProfile, checkAdmin, listActiveSchools, assignProfileSchool, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, getProjectMemberCounts, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, listElections, getElectionCandidates, getMyElectionReceipt, createElection, setElectionEligibility, submitElectionCandidate, reviewElectionCandidate, advanceElectionStage, castElectionVote, getElectionResults, submitElectionObjection, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
     initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
     projectsEnabled: () => Boolean(cfg.enableCloudProjects),
     eventsEnabled: () => Boolean(cfg.enableCloudEvents),
-    contentEnabled: () => Boolean(cfg.enableCloudContent)
+    contentEnabled: () => Boolean(cfg.enableCloudContent),
+    electionsEnabled: () => Boolean(cfg.enableCloudElections)
   };
 })();
