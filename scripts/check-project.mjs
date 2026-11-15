@@ -399,51 +399,77 @@ check(!adminProvisioning.includes('create_my_profile(') &&
 
 const signupStart = cloud.indexOf('async function signUp(');
 const signinStart = cloud.indexOf('async function signIn(', signupStart);
+const resetStart = cloud.indexOf('async function requestPasswordReset(', signinStart);
+const updatePasswordStart = cloud.indexOf('async function updatePassword(', resetStart);
 const signupSource = signupStart >= 0 && signinStart > signupStart ? cloud.slice(signupStart, signinStart) : '';
-check(Boolean(signupSource) && signupSource.includes('options: { data: { display_name: displayName, preferred_language: language }'),
-  'Signup must create a basic profile using only display-name/language metadata.');
-const signupMetadata = signupSource.match(/options:\s*\{\s*data:\s*\{([^}]*)\}/);
+const signinSource = signinStart >= 0 && resetStart > signinStart ? cloud.slice(signinStart, resetStart) : '';
+const resetSource = resetStart >= 0 && updatePasswordStart > resetStart ? cloud.slice(resetStart, updatePasswordStart) : '';
+check(Boolean(signupSource) &&
+  signupSource.includes('options: { data: { display_name: displayName, preferred_language: language }') &&
+  signupSource.includes('cfg.enableSelfServiceSignup !== true || cfg.enableAuthCaptcha !== true') &&
+  signupSource.includes('captchaToken }'),
+  'Self-service signup must be CAPTCHA-gated and may store only ordinary profile metadata.');
+const signupMetadata = signupSource.match(/options:\\s*\\{\\s*data:\\s*\\{([^}]*)\\}/);
 check(Boolean(signupMetadata) &&
   signupMetadata[1].includes('display_name') &&
   signupMetadata[1].includes('preferred_language') &&
   !/role|isAdmin|account_type|verification_representative/i.test(signupMetadata[1]),
   'Signup metadata must not accept a client-selected role or administrator flag.');
+check(Boolean(signinSource) &&
+  signinSource.includes('cfg.enableAuthCaptcha === true') &&
+  signinSource.includes('captchaToken') &&
+  signinSource.includes('signInWithPassword'),
+  'Password sign-in must pass a CAPTCHA token whenever Supabase Auth CAPTCHA is enabled.');
+check(Boolean(resetSource) &&
+  resetSource.includes('cfg.enableAuthCaptcha === true') &&
+  resetSource.includes('captchaToken') &&
+  resetSource.includes('resetPasswordForEmail'),
+  'Password recovery must pass a CAPTCHA token whenever Supabase Auth CAPTCHA is enabled.');
 check(cloud.includes(".select('display_name,preferred_language,school_id,grade_label,account_type')") &&
   cloud.includes(".select('display_name,preferred_language,school_id,grade_label')") &&
   cloud.includes("accountType:data.account_type||'tester'"),
   'Cloud profile loading must support both current and tester-onboarding schemas while keeping the default unprivileged.');
 
+const browserConfig = read('supabase-config.js');
+check(browserConfig.includes('enableAuthCaptcha: false') &&
+  browserConfig.includes('enableSelfServiceSignup: false') &&
+  browserConfig.includes('turnstileSiteKey: ""'),
+  'Public signup and CAPTCHA must remain off by default until the adult owner configures the provider.');
+
 const authModalStart = app.indexOf('function loginModal(){');
-const electionModalStart = app.indexOf('function viewElection', authModalStart);
+const electionModalStart = app.indexOf('function passwordRecoveryModal', authModalStart);
 const authModalSource = authModalStart >= 0 && electionModalStart > authModalStart ? app.slice(authModalStart, electionModalStart) : '';
 check(authModalSource.includes('Тестировщик') && authModalSource.includes('Сыноочу') &&
   authModalSource.includes('name="privacyAck"') &&
+  authModalSource.includes('enableAuthCaptcha') &&
+  authModalSource.includes('enableSelfServiceSignup') &&
+  authModalSource.includes('authTurnstile') &&
+  authModalSource.includes('turnstile.render') &&
   !authModalSource.includes('name="role"'),
-  'Public signup must be bilingual, privacy-aware, and must not offer a role selector.');
+  'Auth UI must support RU/KG tester onboarding, show Turnstile when configured, and never offer a role selector.');
 check(app.includes('testerBadge') && app.includes('adminBadge') &&
   app.includes('window.YntymakCloud?.isAdmin?.()'),
   'Profile must distinguish testers from server-verified administrators.');
 
-const modalRender = new Function('state','window','esc','modal',
+const modalRender = new Function('state','window','esc','modal','disposeTesterCaptcha',
   `${authModalSource}; loginModal();`);
 for (const language of ['RU','KG']) {
   let rendered = null;
   modalRender(
     {lang:language},
-    {YntymakCloud:{configured:()=>true}},
+    {YntymakCloud:{configured:()=>true},YNTYMAK_CONFIG:{enableAuthCaptcha:false,enableSelfServiceSignup:false,turnstileSiteKey:''}},
     value=>String(value ?? ''),
-    (title,body)=>{ rendered={title,body}; }
+    (title,body)=>{ rendered={title,body}; },
+    ()=>{}
   );
   check(Boolean(rendered) && rendered.body.includes('id="loginForm"') &&
-    rendered.body.includes('id="signupForm"') &&
-    rendered.body.includes('name="privacyAck"') &&
-    !rendered.body.includes('+<form') &&
+    rendered.body.includes('Самостоятельная регистрация пока закрыта') ||
+    rendered.body.includes('Өз алдынча катталуу азырынча жабык'),
+    `Rendered ${language} auth modal must show login and invitation-only tester onboarding by default.`);
+  check(!rendered.body.includes('id="signupForm"') &&
     !rendered.body.includes('name="role"'),
-    `Rendered ${language} auth modal must contain working login/signup forms without role selection.`);
-  check(rendered.body.includes(language==='KG'?'Сыноочу':'Тестировщик'),
-    `Rendered ${language} auth modal must label the tester status.`);
+    `Rendered ${language} auth modal must not expose open signup or role assignment by default.`);
 }
-
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');
 check(matrix.includes('20261115_elections_foundation.sql'),
   'Security matrix must include the elections migration.');
