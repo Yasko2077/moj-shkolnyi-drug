@@ -1,0 +1,149 @@
+\set ON_ERROR_STOP on
+
+-- Synthetic-only accounts and school directory entries.
+insert into auth.users(id,email) values
+ ('00000000-0000-0000-0000-000000000001','chair-lenin@example.invalid'),
+ ('00000000-0000-0000-0000-000000000002','chair-pervomai@example.invalid'),
+ ('00000000-0000-0000-0000-000000000003','student-lenin@example.invalid'),
+ ('00000000-0000-0000-0000-000000000004','student-pervomai@example.invalid');
+
+insert into public.schools(id,name,district_key,is_active) values
+ ('10000000-0000-0000-0000-000000000001','Synthetic Test School Lenin','lenin',true),
+ ('10000000-0000-0000-0000-000000000002','Synthetic Test School Pervomai','pervomai',true);
+
+insert into public.profiles(id,display_name,preferred_language,school_id,grade_label) values
+ ('00000000-0000-0000-0000-000000000003','Тестовый ученик Ленинского района','ru','10000000-0000-0000-0000-000000000001','9'),
+ ('00000000-0000-0000-0000-000000000004','Тестовый ученик Первомайского района','ru','10000000-0000-0000-0000-000000000002','10');
+
+insert into public.role_assignments(
+ id,user_id,role_key,school_id,district_key,organization_name,term_label,
+ valid_from,valid_until,verified_by
+) values
+ ('20000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000001',
+  'district_chair',null,'lenin','Synthetic district council','test',current_date,current_date+30,null),
+ ('20000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000002',
+  'district_chair',null,'pervomai','Synthetic district council','test',current_date,current_date+30,null);
+
+-- Use the same event category twice. Each district chair may create only their district event.
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+select public.create_platform_event(
+ 'forum','Synthetic forum Lenin','Synthetic test event for scoped roster testing',
+ current_date+2,'Test venue Lenin',10,'district','Lenin district','lenin'
+) as event_lenin \gset
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',false);
+select public.register_for_event(:'event_lenin'::uuid,true) as registration_lenin \gset
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
+select public.create_platform_event(
+ 'forum','Synthetic forum Pervomai','Synthetic test event for scoped roster testing',
+ current_date+2,'Test venue Pervomai',10,'district','Pervomai district','pervomai'
+) as event_pervomai \gset
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000004',false);
+select public.register_for_event(:'event_pervomai'::uuid,true) as registration_pervomai \gset
+
+-- The Lenovo district chair sees the roster for their own district event, but not Pervomai.
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+do $test$
+declare
+  v_lenin uuid;
+  v_pervomai uuid;
+  v_count integer;
+  v_denied boolean := false;
+begin
+  select id into v_lenin from public.events where title='Synthetic forum Lenin';
+  select id into v_pervomai from public.events where title='Synthetic forum Pervomai';
+
+  select count(*) into v_count from public.get_event_roster(v_lenin);
+  if v_count<>1 then raise exception 'own_district_roster_count_expected_1_got_%',v_count; end if;
+
+  begin
+    perform 1 from public.get_event_roster(v_pervomai);
+  exception when others then
+    if sqlerrm='roster_access_denied' then
+      v_denied:=true;
+    else
+      raise;
+    end if;
+  end;
+  if not v_denied then raise exception 'cross_district_roster_access_was_not_denied'; end if;
+end;
+$test$;
+
+-- A normal student may not retrieve any organizer roster.
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',false);
+do $test$
+declare
+  v_lenin uuid;
+  v_denied boolean := false;
+begin
+  select id into v_lenin from public.events where title='Synthetic forum Lenin';
+  begin
+    perform 1 from public.get_event_roster(v_lenin);
+  exception when others then
+    if sqlerrm='roster_access_denied' then
+      v_denied:=true;
+    else
+      raise;
+    end if;
+  end;
+  if not v_denied then raise exception 'student_roster_access_was_not_denied'; end if;
+end;
+$test$;
+
+-- A student from the wrong district cannot register; a duplicate active registration is denied.
+do $test$
+declare
+  v_lenin uuid;
+  v_pervomai uuid;
+  v_mismatch_denied boolean := false;
+  v_duplicate_denied boolean := false;
+begin
+  select id into v_lenin from public.events where title='Synthetic forum Lenin';
+  select id into v_pervomai from public.events where title='Synthetic forum Pervomai';
+
+  begin
+    perform public.register_for_event(v_pervomai,true);
+  exception when others then
+    if sqlerrm='event_requires_verified_school_in_district' then
+      v_mismatch_denied:=true;
+    else
+      raise;
+    end if;
+  end;
+  if not v_mismatch_denied then raise exception 'cross_district_registration_was_not_denied'; end if;
+
+  begin
+    perform public.register_for_event(v_lenin,true);
+  exception when others then
+    if sqlerrm='already_registered' then
+      v_duplicate_denied:=true;
+    else
+      raise;
+    end if;
+  end;
+  if not v_duplicate_denied then raise exception 'duplicate_registration_was_not_denied'; end if;
+end;
+$test$;
+
+-- Direct INSERT is forbidden even for an authenticated student.
+do $test$
+begin
+  begin
+    insert into public.event_registrations(
+      event_id,user_id,participant_name,school_label,grade_label,
+      participation_format,team_name,public_name_consent,status
+    )
+    select e.id,auth.uid(),'Fake direct insert','Synthetic school','9','individual',null,false,'registered'
+    from public.events e where e.title='Synthetic forum Lenin';
+    raise exception 'event_registration_direct_insert_was_allowed';
+  exception when insufficient_privilege then
+    null;
+  end;
+end;
+$test$;
+
+reset role;
+select 'event_scenario_tests_passed' as result;
