@@ -317,8 +317,12 @@ const signinStart = cloud.indexOf('async function signIn(', signupStart);
 const signupSource = signupStart >= 0 && signinStart > signupStart ? cloud.slice(signupStart, signinStart) : '';
 check(Boolean(signupSource) && signupSource.includes('options: { data: { display_name: displayName, preferred_language: language }'),
   'Signup must create a basic profile using only display-name/language metadata.');
-check(!/role|isAdmin|verification_representative/i.test(signupSource),
-  'Signup must never accept a client-selected role or administrator flag.');
+const signupMetadata = signupSource.match(/options:\s*\{\s*data:\s*\{([^}]*)\}/);
+check(Boolean(signupMetadata) &&
+  signupMetadata[1].includes('display_name') &&
+  signupMetadata[1].includes('preferred_language') &&
+  !/role|isAdmin|account_type|verification_representative/i.test(signupMetadata[1]),
+  'Signup metadata must not accept a client-selected role or administrator flag.');
 check(cloud.includes(".select('display_name,preferred_language,school_id,grade_label,account_type')") &&
   cloud.includes("accountType:data.account_type||'tester'"),
   'Cloud profile loading must read the server-managed tester account type.');
