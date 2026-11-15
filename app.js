@@ -158,7 +158,7 @@ function profile(){
   localHint:'Бул браузердеги демонстрациялык профиль; өзгөрүүлөр башка колдонуучуларга берилбейт.',
   save:'Сактоо',regs:'Иш-чараларга катталууларым',
   none:'Бул браузерде азырынча катталуулар жок. Катышуучулардын толук тизмеси жалпыга көрсөтүлбөйт.',
-  verified:'Мектеп ырасталды',unverified:'Мектеп ырастала элек'
+  verified:'Мектеп ырасталды',unverified:'Мектеп ырастала элек',testerBadge:'Сыноочу аккаунт',adminBadge:'Ыйгарым укуктуу өкүл',demoBadge:'Демо профиль'
  }:{
   kicker:'ТВОЯ УЧЁТНАЯ ЗАПИСЬ',title:'Мой профиль',
   description:'Укажи интересы и класс. Поле «О себе» не подтверждает должность и не выдаёт административные права.',
@@ -174,7 +174,7 @@ function profile(){
   localHint:'Это локальный демонстрационный профиль; изменения не передаются другим пользователям.',
   save:'Сохранить профиль',regs:'Мои регистрации на события',
   none:'Личных регистраций в этом браузере пока нет. Полный список участников публично не отображается.',
-  verified:'Школа подтверждена',unverified:'Школа не подтверждена'
+  verified:'Школа подтверждена',unverified:'Школа не подтверждена',testerBadge:'Аккаунт тестировщика',adminBadge:'Уполномоченный администратор',demoBadge:'Демо-профиль'
  };
  const schoolControl=cloudMode
   ? '<input value="'+esc(p.school||tx.pendingSchool)+'" readonly disabled>'
@@ -182,8 +182,10 @@ function profile(){
  const districtControl=cloudMode
   ? '<input value="'+esc(distName(p.district)||tx.districtPending)+'" readonly disabled>'
   : '<select name="district">'+DISTRICTS.map(d=>'<option value="'+d.key+'" '+(p.district===d.key?'selected':'')+'>'+esc(d[state.lang==='KG'?'ky':'ru'])+'</option>').join('')+'</select>';
+ const isPrivileged=cloudMode&&Boolean(window.YntymakCloud?.isAdmin?.());
+ const accountBadge=cloudMode?(isPrivileged?tx.adminBadge:tx.testerBadge):tx.demoBadge;
  return `${heading(tx.kicker,tx.title,tx.description)}
- <div class="profile-grid"><section class="card profile-card"><div class="profile-big-avatar">${esc(initials(p.name))}</div><h2>${esc(p.name)}</h2><p>${esc(p.school||tx.schoolNotConfirmed)}</p>${tag(p.verified?tx.verified:tx.unverified,p.verified?'':'gold')}<div class="notice gold" style="text-align:left;margin-top:16px">${cloudMode?tx.noticeCloud:tx.noticeLocal}</div></section>
+ <div class="profile-grid"><section class="card profile-card"><div class="profile-big-avatar">${esc(initials(p.name))}</div><h2>${esc(p.name)}</h2><p>${esc(p.school||tx.schoolNotConfirmed)}</p>${tag(accountBadge,isPrivileged?'gold':'blue')} ${tag(p.verified?tx.verified:tx.unverified,p.verified?'':'gold')}<div class="notice gold" style="text-align:left;margin-top:16px">${cloudMode?tx.noticeCloud:tx.noticeLocal}</div></section>
  <section class="card"><div class="card-title">${tx.editProfile}</div><form id="profileForm" class="field-grid">
  <div class="field full"><label>${tx.displayName}</label><input name="name" maxlength="70" value="${esc(p.name)}" required></div>
  <div class="field full"><label>${tx.school}</label>${schoolControl}</div>
