@@ -182,6 +182,26 @@ check(cloud.includes('publicNameConsent!==true||publicProgramConsent!==true'),
   'Cloud client must reject candidate submission without both consents.');
 check(cloud.includes('async function getMyProfile()') && cloud.includes('async function updateMyProfile('),
   'Cloud profile read/update methods are missing.');
+check(cloud.includes("select('display_name,preferred_language,school_id,grade_label,account_type')") &&
+  cloud.includes("select('display_name,preferred_language,school_id,grade_label')") &&
+  cloud.includes("accountType:'tester'"),
+  'Tester profiles must remain readable before and after the account_type migration, and default to least privilege.');
+check(cloud.includes("accountType: 'tester'") &&
+  !cloud.includes("user_metadata: { account_type") &&
+  !cloud.includes("user_metadata: { role"),
+  'Public signup must never accept an account type or privileged role from client metadata.');
+check(app.includes('Создать аккаунт тестировщика') &&
+  app.includes('Тестировщик') &&
+  app.includes('Администраторские права здесь не выбираются'),
+  'Signup UI must clearly label tester access and separate administrator provisioning.');
+check(read('ADMIN_SETUP.txt').includes('schema_mvp07.sql') &&
+  read('ADMIN_SETUP.txt').includes('Не запускай старые SQL-файлы') &&
+  !read('ADMIN_SETUP.txt').includes('insert into public.platform_admins'),
+  'Legacy admin setup must warn against the retired platform_admins workflow.');
+check(read('docs/TESTER_QUICK_START.md').includes('Кыргызча') &&
+  read('docs/TESTER_QUICK_START.md').includes('Русский'),
+  'External tester quick start must be bilingual.');
+
 check(app.includes('async function loadCloudProfile()'),
   'App must load the authenticated cloud profile.');
 check(app.includes("const langCode=()=>state.lang==='KG'?'ky':'ru';"),
