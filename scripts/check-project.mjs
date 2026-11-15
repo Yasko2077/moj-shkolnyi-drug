@@ -184,7 +184,7 @@ check(cloud.includes('async function getMyProfile()') && cloud.includes('async f
   'Cloud profile read/update methods are missing.');
 check(cloud.includes("select('display_name,preferred_language,school_id,grade_label,account_type')") &&
   cloud.includes("select('display_name,preferred_language,school_id,grade_label')") &&
-  cloud.includes("accountType:'tester'"),
+  cloud.includes("accountType:data.account_type||'tester'"),
   'Tester profiles must remain readable before and after the account_type migration, and default to least privilege.');
 check(cloud.includes("accountType: 'tester'") &&
   !cloud.includes("user_metadata: { account_type") &&
