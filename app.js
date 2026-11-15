@@ -240,14 +240,14 @@ function loginModal(){
   intro:'Жаңы аккаунт автоматтык түрдө «Сыноочу» макамын алат. Өзүң колдонууга уруксат берилген электрондук почтаны пайдалан. Почтаны ырастоо талап кылынышы мүмкүн.',
   email:'Электрондук почта',password:'Сырсөз',displayName:'Көрсөтүлүүчү ысым',newAccount:'Жаңы тест аккаунту',
   privacy:'Бул тесттик версия экенин түшүнөм. Башка окуучулардын жеке маалыматтарын, байланыштарын, документтерин же купуя кайрылууларын киргизбейм.',
-  login:'Кирүү',signup:'Тест аккаунтун түзүү',cancel:'Жабуу',
+  login:'Кирүү',signup:'Тест аккаунтун түзүү',cancel:'Жабуу',passwordHint:'кеминде 8 белги',
   admin:'Администратордук укуктар бул жерде тандалбайт. Аларды долбоордун чоңдорго жооптуу ээси өзүнчө, жабык тартипте дайындайт.'
  }:{
   title:'Вход и регистрация',
   intro:'Новый аккаунт автоматически получает статус «Тестировщик». Используй только адрес электронной почты, которым тебе разрешено пользоваться. Подтверждение почты может быть обязательным.',
   email:'Электронная почта',password:'Пароль',displayName:'Имя для отображения',newAccount:'Новый тестовый аккаунт',
   privacy:'Я понимаю, что это тестовая версия. Я не буду вводить личные данные других учеников, контакты, документы или чувствительные обращения.',
-  login:'Войти',signup:'Создать аккаунт тестировщика',cancel:'Закрыть',
+  login:'Войти',signup:'Создать аккаунт тестировщика',cancel:'Закрыть',passwordHint:'минимум 8 символов',
   admin:'Администраторские права здесь не выбираются. Их отдельно и закрытым способом назначает взрослый ответственный владелец проекта.'
  };
  const configured=Boolean(window.YntymakCloud?.configured());
@@ -264,7 +264,7 @@ function loginModal(){
  <form id="signupForm" class="field-grid">
   <div class="field full"><label>${esc(t.displayName)}</label><input name="displayName" maxlength="70" required></div>
   <div class="field full"><label>${esc(t.email)}</label><input name="email" type="email" autocomplete="email" required></div>
-  <div class="field full"><label>${esc(t.password)} (minimum 8)</label><input name="password" type="password" minlength="8" autocomplete="new-password" required></div>
+  <div class="field full"><label>${esc(t.password)} (${esc(t.passwordHint)})</label><input name="password" type="password" minlength="8" autocomplete="new-password" required></div>
   <div class="field full"><label class="lang-hint"><input type="checkbox" name="privacyAck" required> ${esc(t.privacy)}</label></div>
   <div class="field full form-actions"><button class="btn" type="submit" ${configured?'':'disabled'}>${esc(t.signup)}</button></div>
  </form>
