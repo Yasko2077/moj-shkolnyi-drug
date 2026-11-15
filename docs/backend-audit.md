@@ -51,8 +51,8 @@
 - согласие хранится доказуемо и относится к конкретному мероприятию;
 - публичный интерфейс показывает агрегированное число, а не персональные данные.
 
-### B4. Публикация новости не атомарна
-`createNews` сначала создаёт черновик, затем отдельным запросом публикует его. Если второй запрос не пройдёт, останется черновик; если политики позволяют некорректный update, граница полномочий ослабляется. Рекомендуется единый RPC `publish_news_post` с серверной проверкой роли и валидацией.
+### B4. Публикация новости — исправлено в коде, ожидает staging
+Первоначально `createNews` выполнял insert черновика и отдельный update публикации. В коммите `208c9c9` клиент переведён на единый RPC `publish_news_post`; SQL для атомарной публикации и отзыв прямых клиентских write-прав добавлены в `20261116_news_publish_atomic.sql`. Статические CI-проверки проходят. **Это исправление пока не развёрнуто в Supabase**, поэтому до staging-применения флаг контента остаётся выключенным.
 
 ### B5. ИИ и передача данных внешнему обработчику
 Edge Function проверяет Bearer-сессию, валидирует длину сообщения, фильтрует очевидные контактные данные, ограничивает историю и вызывает quota RPC. Однако:
@@ -136,3 +136,34 @@ Read-only инвентаризация целевой базы:
 Клиентский `cloud.js` переведён на вызов нового RPC. В `scripts/check-project.mjs` добавлены статические регрессионные проверки этих гарантий.
 
 **Важно:** этот патч пока только подготовлен в Git. Он не применён к облачной базе. Его порядок относительно исторических SQL-файлов необходимо подтвердить в migration baseline и на staging. До этого публикация новостей в уже работающем облачном окружении может не соответствовать новому клиентскому коду; feature flag контента должен оставаться выключенным.
+
+
+## 9. Углублённая сверка клиентских ссылок и SQL-источников
+
+Проверены прямые таблицы и RPC, на которые ссылается текущий `cloud.js`.
+
+| Клиентская область | Таблицы / RPC | Источник SQL в репозитории | Вывод |
+|---|---|---|---|
+| Auth/profile | `profiles`, `schools`, `create_my_profile`, `is_verification_representative` | Базовая схема текущего проекта (не включена в дерево SQL этой ветки), `20261115_profile_school_integrity.sql`, `20261115_trusted_school_assignment.sql` | Нужен read-only schema snapshot; нельзя восстановить базу только из патчей |
+| Initiatives | `initiatives` | `20261115_initiatives_cloud.sql`, `20261115_initiative_school_scope.sql` | Патчи есть; проверить фактическую исходную таблицу и grants |
+| Projects | `student_projects`, `project_join_requests`, `project_tasks`, `student_project_members`; RPC review/withdraw/count | `20261115_project_lab.sql`, `20261115_project_membership.sql`, `20261115_project_join_review.sql` | Патчи есть; нужен тест RLS на владельце, заявителе и постороннем ученике |
+| Events | `events`, `event_registrations`; RPC create/register/roster/count | `20261115_events_cloud.sql`, `20261115_event_creator_scope.sql`, `20261115_event_registration_consent.sql`, `20261115_event_registration_hardening.sql`, `20261115_event_roster_scope.sql`, `20261115_event_registration_counts.sql` | Сильно зависит от исходной базовой схемы; school-scope намеренно закрыт |
+| News/polls | `news_posts`, `community_polls`, `poll_options`, `poll_responses`; publish/create/vote/results RPC | `20261115_news_polls_cloud.sql`, `20261115_poll_option_write_lock.sql`, `20261116_news_publish_atomic.sql` | Новая публикация через атомарный RPC; требуется staging |
+| Elections | `elections`, `election_candidates`, `election_eligibility`, `election_voter_receipts`, `election_ballots`, `election_objections`; RPC этапов и голосования | `20261115_elections_foundation.sql` | Отдельный высокий риск; выключено |
+| AI quota | `yntymak_ai_daily_usage`; `consume_yntymak_ai_quota` | `20261115_ai_quota.sql` | Проверить конкурентный лимит и grants на staging |
+
+### Важное различие исторической схемы
+
+`supabase/schema_mvp07.sql` явно относится к прежней модели: использует `platform_admins` / `is_platform_admin()`, `platform_events` / `platform_event_registrations` и старую модель выборов. Текущий `cloud.js` обращается к `events` / `event_registrations` и проверяет `is_verification_representative()`. README также предупреждает, что `schema_mvp07.sql` и `schema_mvp09.sql` не являются инструкцией для текущей рабочей схемы. Их нельзя применять как baseline текущего backend.
+
+### Отсутствующий артефакт для воспроизводимости
+
+В дереве этой ветки нет актуального исходного SQL-файла базовой схемы, который полностью создаёт используемые базовые таблицы `profiles`, `schools`, `role_assignments`, `events` и `event_registrations`, а также исходные helper-функции. README описывает существующую базу, но описание не заменяет DDL. Поэтому миграционный baseline нельзя безопасно собрать только из доступных в репозитории файлов. Следующий обязательный шаг — получить от взрослого владельца проекта read-only экспорт схемы (DDL без строк данных) из Supabase и сверить его с этими патчами.
+
+### Конкретный порядок дальнейшей работы
+
+1. Получить read-only DDL snapshot и список применённых миграций из текущего Supabase проекта.
+2. Сопоставить таблицы, колонки, constraints, indexes, RLS policies, grants и signatures RPC с клиентским API.
+3. Сформировать отдельный staging baseline и проверить полный порядок патчей с нуля.
+4. Прогнать положительные и отрицательные RLS-сценарии с синтетическими аккаунтами.
+5. Только после успешного staging — согласовать с ответственным взрослым контролируемое развёртывание.
