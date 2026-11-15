@@ -185,6 +185,22 @@
     if(error) throw error;
     return data;
   }
+  async function reviewProjectJoinRequest(requestId, decision) {
+    const c=getClient();
+    if(!c||!session?.user) throw new Error('Войди в аккаунт.');
+    if(!['accepted','declined'].includes(decision)) throw new Error('Недопустимое решение.');
+    const {error}=await c.rpc('review_project_join_request',{p_request_id:requestId,p_decision:decision});
+    if(error) throw error;
+    return true;
+  }
+  async function withdrawProjectJoinRequest(requestId) {
+    const c=getClient();
+    if(!c||!session?.user) throw new Error('Войди в аккаунт.');
+    const {error}=await c.rpc('withdraw_project_join_request',{p_request_id:requestId});
+    if(error) throw error;
+    return true;
+  }
+
   async function listEvents() {
     const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт для просмотра мероприятий.');
     const {data,error}=await c.from('events').select('id,event_key,title,is_open,description,event_date,place_label,capacity,scope,target_label,district_key').order('event_date',{ascending:true});
