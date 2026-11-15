@@ -436,7 +436,7 @@ function loginModal(){
  ${signupContent}
  <p class="lang-hint">${esc(t.admin)}</p>`;
  modal(t.title,body);
- if(signupEnabled)loadTesterCaptcha().catch(error=>toast(error.message));
+ if(authCaptchaEnabled)loadTesterCaptcha().catch(error=>toast(error.message));
 }
 function passwordRecoveryModal(){
  const kg=state.lang==='KG';
