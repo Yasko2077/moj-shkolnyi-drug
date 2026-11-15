@@ -1,0 +1,58 @@
+\set ON_ERROR_STOP on
+
+-- New synthetic tester account; email is marked confirmed only for this database-only test.
+insert into auth.users(id,email,email_confirmed_at,confirmed_at)
+values(
+  '00000000-0000-0000-0000-000000000005',
+  'synthetic-tester@example.invalid',
+  now(),now()
+);
+
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000005',false);
+select public.create_my_profile('Synthetic Tester','ru',null);
+
+do $tester$
+declare
+  v_account_type text;
+  v_type_write_denied boolean := false;
+  v_role_insert_denied boolean := false;
+begin
+  select account_type into v_account_type
+  from public.profiles where id=auth.uid();
+
+  if v_account_type is distinct from 'tester' then
+    raise exception 'new_self_service_profile_expected_tester_got_%',v_account_type;
+  end if;
+
+  begin
+    update public.profiles set account_type='administrator' where id=auth.uid();
+    raise exception 'tester_changed_own_account_type';
+  exception when insufficient_privilege then
+    v_type_write_denied:=true;
+  end;
+  if not v_type_write_denied then
+    raise exception 'tester_account_type_write_was_not_denied';
+  end if;
+
+  begin
+    insert into public.role_assignments(
+      user_id,role_key,school_id,district_key,organization_name,
+      term_label,valid_from,valid_until,verified_by
+    ) values(
+      auth.uid(),'verification_representative',null,null,
+      'Synthetic unauthorized assignment','test',
+      current_date,current_date+30,auth.uid()
+    );
+    raise exception 'tester_self_assigned_platform_admin';
+  exception when insufficient_privilege then
+    v_role_insert_denied:=true;
+  end;
+  if not v_role_insert_denied then
+    raise exception 'tester_role_assignment_insert_was_not_denied';
+  end if;
+end;
+$tester$;
+
+reset role;
+select 'tester_onboarding_scenario_passed' as result;
