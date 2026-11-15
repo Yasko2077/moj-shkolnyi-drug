@@ -244,6 +244,15 @@ check(eventHardening.includes('revoke insert (') &&
   'Event registration must revoke the historical column-level INSERT grants.');
 check(eventHardening.includes('revoke all on function public.get_event_roster(text) from public, anon, authenticated;'),
   'Legacy unscoped event roster RPC must be inaccessible before the scoped replacement is installed.');
+check(eventHardening.includes('revoke all on function public.register_for_event(uuid,text,text,text,text,text)') &&
+  !eventHardening.includes('grant execute on function public.register_for_event(uuid,text,text,text,text,text)'),
+  'Legacy unconsented registration RPC must stay disabled until the consent-based overload is installed.');
+
+const initialEventsPatch = read('supabase/patches/20261115_events_cloud.sql');
+check(initialEventsPatch.includes('revoke all on function public.get_event_roster(text) from public, anon, authenticated;') &&
+  initialEventsPatch.includes('revoke all on function public.register_for_event(uuid,text,text,text,text,text)') &&
+  initialEventsPatch.includes('revoke all on function public.create_platform_event(text,text,text,date,text,integer,text,text,text)'),
+  'The first events migration must close legacy RPC access during the multi-patch rollout.');
 
 const profileIntegrity = read('supabase/patches/20261115_profile_school_integrity.sql');
 check(profileIntegrity.includes('revoke update (id,display_name,preferred_language,school_id,grade_label,created_at,updated_at)') &&
