@@ -232,6 +232,9 @@ check(cloud.includes("c.rpc('publish_news_post'") &&
   !cloud.includes("c.from('news_posts').update("),
   'Cloud news client must publish only through the atomic publish_news_post RPC.');
 
+check(eventSchemaPatch.includes('revoke all on function public.can_manage_events() from public, anon, authenticated;'),
+  'Legacy event-management helper must not remain directly executable by browser clients.');
+
 const eventSchemaPatch = read('supabase/patches/20261115_events_cloud.sql');
 check(eventSchemaPatch.includes('drop constraint if exists events_event_key_key;'),
   'Event categories must not remain globally unique; multiple events may share one category.');
