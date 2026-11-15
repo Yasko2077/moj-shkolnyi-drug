@@ -207,6 +207,12 @@ check(app.includes('data-task-toggle') && app.includes("document.addEventListene
   'Project task checkboxes must work both in page content and modal dialogs.');
 check(app.includes("action==='mark-notifications-read'"), 'Notification read-all action is missing.');
 check(app.includes("data-cancel-registration"), 'Local event registration cancellation is missing.');
+check(app.includes('id="eventSearch"') && app.includes('id="eventCategory"') && app.includes('id="eventTime"'),
+  'Event calendar search and filter controls are missing.');
+check(app.includes('function applyEventFilters()') && app.includes("time==='registered'") && app.includes("time==='upcoming'"),
+  'Event calendar filters must support upcoming dates and the current participant\'s registrations.');
+check(app.includes('data-event-reset') && app.includes("e.target.id==='eventSearch'"),
+  'Event calendar filter reset and live search handlers are missing.');
 check(app.includes("state.page==='workspace'?t('workspace')"), 'Workspace breadcrumb must follow the selected language.');
 check(app.includes("workspace:'Жеке кабинет'") && app.includes("workspace:'Мой кабинет'"),
   'Workspace navigation must have Russian and Kyrgyz labels.');
