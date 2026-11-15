@@ -79,10 +79,100 @@ function favoriteButton(type,id){const saved=isFavorite(type,id);return `<button
 function toggleFavorite(type,id){const i=db.favorites.findIndex(x=>x.type===type&&x.id===id);if(i>=0){db.favorites.splice(i,1);toast('Убрано из избранного.');}else{db.favorites.unshift({type,id,addedAt:new Date().toISOString()});toast('Сохранено в избранное.');}persist();render();}
 function favoriteItem(item){if(!item)return '';return item.type==='idea'?db.ideas.find(x=>x.id===item.id):item.type==='project'?db.projects.find(x=>x.id===item.id):item.type==='event'?db.events.find(x=>x.id===item.id):null;}
 function updateShell(){document.documentElement.lang=state.lang==='KG'?'ky':'ru';const p=db.profile;$('#sidebarName').textContent=p.name||'Гость';$('#sidebarMeta').textContent=p.school||'Профиль не заполнен';$('#sidebarAvatar').textContent=initials(p.name);$('#topAvatar').textContent=initials(p.name);$('#crumb').textContent=state.page==='workspace'?t('workspace'):(pageNames[state.page]||'Ынтымак');$('#ideaCount').textContent=db.ideas.filter(x=>x.status==='open').length;$('#environmentLabel').textContent=state.realAdmin?'АККАУНТ АДМИНИСТРАТОРА ПРОВЕРЕН · ДЕМО-ДАННЫЕ ЛОКАЛЬНЫЕ':'ПРОТОТИП · ТОЛЬКО ВЫМЫШЛЕННЫЕ ДАННЫЕ';$('#modeLabel').textContent=state.realAdmin?'Администратор · локальный тест':window.YntymakCloud?.configured()?'Supabase Auth подключён':'Демо-режим';$('#authButton').textContent=window.YntymakCloud?.getSession()? 'Аккаунт / профиль':t('login');$('#signOutButton').hidden=!window.YntymakCloud?.getSession();$('#adminNav').hidden=!state.realAdmin;$$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===state.page));$$('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;el.textContent=t(key);});$('#languageBtn').innerHTML=state.lang==='RU'?'RU <span>·</span> KG':'KG <span>·</span> RU';}
-function home(){const ideas=db.ideas.filter(x=>x.status==='open').length, elections=db.elections.filter(x=>!['closed','cancelled'].includes(x.stage)).length, projects=db.projects.length, events=db.events.filter(x=>x.status==='open').length;return `${heading('ЕДИНСТВО НАЧИНАЕТСЯ С УЧАСТИЯ','Твоя школа. Твои идеи. Общий город.','Ынтымак помогает ученикам Бишкека создавать проекты, обмениваться опытом и участвовать в жизни школьного сообщества.',btn('＋ Предложить идею','data-action="new-idea"'))}
-<section class="hero"><div class="hero-content"><div class="hero-kicker">ЫНТЫМАК · УЧЕНИЧЕСКОЕ УЧАСТИЕ В БИШКЕКЕ</div><h2>От идеи в классе —<br>к проекту для города.</h2><p>Предлагай улучшения, собирай команду, учись организовывать события и следи за тем, как школьные инициативы переходят от замысла к результату.</p><div class="hero-actions">${btn('Открыть проекты ↗','data-page="projects"')}${btn('Спросить ИИ-помощника','data-page="assistant"','btn-ghost')}</div></div><div class="hero-art"><div class="ornament"><span>Ы</span></div><small>БИРГЕ · БИШКЕК · КЕЛЕЧЕК</small></div></section>
-<div class="stats-grid"><div class="stat-card"><span class="stat-icon">✳</span><div><strong>${ideas}</strong><small>Идей открыто для обсуждения</small></div></div><div class="stat-card"><span class="stat-icon">◈</span><div><strong>${elections}</strong><small>Активных учебных выборов</small></div></div><div class="stat-card"><span class="stat-icon">↗</span><div><strong>${projects}</strong><small>Проектов в банке</small></div></div><div class="stat-card"><span class="stat-icon">▦</span><div><strong>${events}</strong><small>Открытых мероприятий</small></div></div></div>
-<div class="home-grid"><section><div class="section-row"><h2>Что происходит</h2><button class="text-action" data-page="ideas">Все предложения →</button></div><div class="list-grid">${db.ideas.filter(x=>x.status==='open'||x.status==='in_progress').slice(0,2).map(ideaCard).join('')}</div><div class="section-row"><h2>Ближайшие события</h2><button class="text-action" data-page="events">Все события →</button></div><div class="card stack">${db.events.filter(x=>x.status==='open').slice(0,2).map(eventRow).join('')}</div></section><aside class="stack"><div class="card"><div class="card-title">Путь идеи</div><div class="feed-note"><span class="feed-date">01</span><div><strong>Сформулируй проблему</strong><p>Опиши, что можно улучшить, и предложи выполнимое решение.</p></div></div><div class="feed-note"><span class="feed-date">02</span><div><strong>Найди команду</strong><p>Проверь, кто готов помочь, и распредели небольшие задачи.</p></div></div><div class="feed-note"><span class="feed-date">03</span><div><strong>Покажи результат</strong><p>Расскажи, что получилось и чему научилась команда.</p></div></div></div><div class="notice gold"><strong>Безопасность и уважение</strong><br>Не публикуй имена других детей, телефоны, адреса, документы и личные истории. Для сложных ситуаций обратись к доверенному взрослому.</div><div class="card"><div class="card-title">Официальные сведения о школах</div><p class="card-sub">Список организаций и актуальные контакты школ проверяй в официальном каталоге Департамента образования мэрии Бишкека.</p><a class="text-action" href="https://edu.e-meria.kg/schools" target="_blank" rel="noopener">Открыть каталог школ ↗</a></div></aside></div>`;}
+function home(){
+ const kg=state.lang==='KG';
+ const t=kg?{
+  eyebrow:'БИШКЕК · ОКУУЧУЛАРДЫН ӨЗҮН-ӨЗҮ БАШКАРУУСУ',
+  title:'Шаар окуучулар катышканда өзгөрөт.',
+  intro:'Ынтымак — Бишкектеги мектеп окуучулары үчүн бирдиктүү мейкиндик. Идея сунушта, команда түз, долбоорлорго жана иш-чараларга катыш.',
+  join:'Тестирлөөгө кошулуу',explore:'Мүмкүнчүлүктөрдү көрүү',
+  status:'СЫНОО ВЕРСИЯСЫ',statusTitle:'Ынтымакты бирге текшеребиз',
+  statusText:'Азыр бул жерде демонстрациялык мисалдар көрсөтүлөт. Жаңы аккаунт «Сыноочу» макамын алат; администратор укуктары өзүнчө дайындалат.',
+  facts:[['4','Бишкек району'],['2','тил: RU / KG'],['1','окуучулар платформасы']],
+  featuresTitle:'Окуучулар үчүн бирдиктүү мейкиндик',
+  featuresIntro:'Мектептеги демилгеден шаардык кызматташууга чейин.',
+  features:[
+   ['✳','Сунуштар','Мектептин чөйрөсүн жакшыртуу боюнча идеяларды бер жана алардын каралуу абалын көр.','ideas','Сунуштарга өтүү'],
+   ['↗','Долбоорлор жана командалар','Долбоор түз, катышууга арыз бер, тапшырмаларды жана команданын ишин уюштур.','projects','Долбоорлорду көрүү'],
+   ['▦','Иш-чаралар','Иш-чараларды карап, уюштуруучуга керектүү маалыматтарды гана берип каттал.','events','Календарды ач'],
+   ['✧','ЖИ жардамчысы','Иш-чаранын планын, долбоордун паспортун жана эки тилдеги билдирүүлөрдү даярда.','assistant','Жардамчыны ач']
+  ],
+  pathTitle:'Кантип катышса болот?',
+  steps:[['01','Аккаунт түз','Өзүң колдонууга уруксат берилген email менен катталып, почтаңды ырастап кир.'],['02','Долбоорду танда','Өзүңө кызыктуу сунушту, команданы же иш-чараны тап.'],['03','Идеяңды ишке ашыр','Команда менен иштеп, натыйжасын бөлүш.']],
+  districtsTitle:'Бишкектин төрт району',
+  districts:['Ленин району','Биринчи май району','Октябрь району','Свердлов району'],
+  safetyTitle:'Коопсуздук биринчи орунда',
+  safetyText:'Башка окуучулардын жеке маалыматтарын, телефон номерлерин, даректерин же документтерин жарыялаба. Кооптуу жагдай болсо, ишенимдүү чоң кишиге кайрыл.',
+  catalog:'Мектептердин расмий каталогу ↗',tester:'Тест аккаунтун түзүү'
+ }:{
+  eyebrow:'БИШКЕК · УЧЕНИЧЕСКОЕ САМОУПРАВЛЕНИЕ',
+  title:'Город меняется, когда ученики участвуют.',
+  intro:'Ынтымак — единое пространство для школьников Бишкека. Предлагай идеи, собирай команды, участвуй в проектах и школьных событиях.',
+  join:'Присоединиться к тестированию',explore:'Посмотреть возможности',
+  status:'ТЕСТОВАЯ ВЕРСИЯ',statusTitle:'Создаём Ынтымак вместе',
+  statusText:'Сейчас в интерфейсе показаны демонстрационные примеры. Новый аккаунт получает статус «Тестировщик», а права администратора назначаются отдельно.',
+  facts:[['4','района Бишкека'],['2','языка: RU / KG'],['1','городская платформа']],
+  featuresTitle:'Всё для ученического участия',
+  featuresIntro:'От инициативы в своей школе до сотрудничества по всему городу.',
+  features:[
+   ['✳','Предложения','Предлагай идеи для улучшения школьной среды и отслеживай их рассмотрение.','ideas','Перейти к предложениям'],
+   ['↗','Проекты и команды','Создавай проекты, подавай заявки в команды и работай с задачами.','projects','Открыть проекты'],
+   ['▦','Мероприятия','Изучай события и регистрируйся, передавая организатору только необходимые данные.','events','Открыть календарь'],
+   ['✧','ИИ-помощник','Готовь планы мероприятий, паспорта проектов и объявления на двух языках.','assistant','Открыть помощника']
+  ],
+  pathTitle:'Как начать участвовать?',
+  steps:[['01','Создай аккаунт','Зарегистрируйся с разрешённой для тебя почтой, подтверди адрес и войди.'],['02','Выбери направление','Найди инициативу, проектную команду или мероприятие.'],['03','Воплоти идею','Работай с командой, отмечай задачи и делись результатом.']],
+  districtsTitle:'Четыре района Бишкека',
+  districts:['Ленинский район','Первомайский район','Октябрьский район','Свердловский район'],
+  safetyTitle:'Безопасность — прежде всего',
+  safetyText:'Не публикуй чужие персональные данные, телефоны, адреса и документы. При опасной ситуации обратись к взрослому, которому доверяешь.',
+  catalog:'Официальный каталог школ ↗',tester:'Создать аккаунт тестировщика'
+ };
+ return `
+ <section class="portal-hero">
+  <div class="portal-hero-copy">
+   <div class="portal-eyebrow"><span class="portal-pulse"></span>${t.eyebrow}</div>
+   <h1>${t.title}</h1>
+   <p class="portal-intro">${t.intro}</p>
+   <div class="portal-cta">
+    ${btn(t.join,'data-action="open-auth"')}
+    ${btn(t.explore,'data-page="projects"','btn-outline')}
+   </div>
+   <div class="portal-trustline"><span>⌁</span> ${kg?'Окуучулардын үнү маанилүү':'Голос каждого ученика имеет значение'}</div>
+  </div>
+  <div class="portal-hero-visual" aria-hidden="true">
+   <div class="portal-ornament portal-ornament-a"></div><div class="portal-ornament portal-ornament-b"></div>
+   <div class="portal-emblem"><svg viewBox="0 0 180 180" role="presentation"><path d="M90 7 173 90 90 173 7 90Z"/><path d="M90 28 152 90 90 152 28 90Z"/><path d="M90 49 131 90 90 131 49 90Z"/><path d="M7 90h166M90 7v166"/><circle cx="90" cy="90" r="8"/></svg><strong>Ы</strong></div>
+   <div class="portal-visual-caption"><span>БИРГЕ</span><i></i><span>БИШКЕК</span><i></i><span>КЕЛЕЧЕК</span></div>
+   <div class="portal-floating-card"><span class="portal-mini-icon">✳</span><span><b>${kg?'Идеядан':'От идеи'}</b><small>${kg?'натыйжага':'к результату'}</small></span><span class="portal-arrow">↗</span></div>
+  </div>
+ </section>
+ <section class="portal-status card">
+  <div class="portal-status-mark">i</div><div class="portal-status-copy"><span class="portal-status-kicker">${t.status}</span><strong>${t.statusTitle}</strong><p>${t.statusText}</p></div>
+  <button class="btn btn-soft" type="button" data-action="open-auth">${t.tester}</button>
+ </section>
+ <section class="portal-facts" aria-label="Платформа">
+  ${t.facts.map(x=>`<div class="portal-fact"><strong>${x[0]}</strong><span>${x[1]}</span></div>`).join('')}
+ </section>
+ <section class="portal-section">
+  <div class="portal-section-head"><div><span class="eyebrow">${kg?'МҮМКҮНЧҮЛҮКТӨР':'ВОЗМОЖНОСТИ'}</span><h2>${t.featuresTitle}</h2><p>${t.featuresIntro}</p></div></div>
+  <div class="portal-feature-grid">
+   ${t.features.map(x=>`<article class="portal-feature card"><div class="portal-feature-icon">${x[0]}</div><h3>${x[1]}</h3><p>${x[2]}</p><button class="portal-link" type="button" data-page="${x[3]}">${x[4]} <span>↗</span></button></article>`).join('')}
+  </div>
+ </section>
+ <section class="portal-section portal-path-section">
+  <div class="portal-section-head"><div><span class="eyebrow">${kg?'КАТЫШУУ ЖОЛУ':'ТРИ ПРОСТЫХ ШАГА'}</span><h2>${t.pathTitle}</h2></div></div>
+  <div class="portal-steps">${t.steps.map(x=>`<article class="portal-step"><span>${x[0]}</span><div><h3>${x[1]}</h3><p>${x[2]}</p></div></article>`).join('')}</div>
+ </section>
+ <section class="portal-bottom-grid">
+  <div class="card portal-districts"><span class="eyebrow">${kg?'БИШКЕК ШААРЫ':'ТЕРРИТОРИЯ ПРОЕКТА'}</span><h2>${t.districtsTitle}</h2><div class="portal-district-list">${t.districts.map((x,i)=>`<span><i>${String(i+1).padStart(2,'0')}</i>${x}</span>`).join('')}</div><a class="portal-external-link" href="https://edu.e-meria.kg/schools" target="_blank" rel="noopener">${t.catalog}</a></div>
+  <div class="portal-safety"><div class="portal-safety-icon">⌑</div><h2>${t.safetyTitle}</h2><p>${t.safetyText}</p><button class="btn btn-outline" type="button" data-page="help">${kg?'Коопсуздук эрежелери':'Правила безопасности'} ↗</button></div>
+ </section>
+ <section class="portal-final-cta">
+  <div><span class="eyebrow">ЫНТЫМАК · БИШКЕК</span><h2>${kg?'Сенин идеяң маанилүү.':'Твоя идея важна.'}</h2><p>${kg?'Кел, мектептердин ортосундагы кызматташууну чогуу өнүктүрөлү.':'Присоединяйся к тестированию и помоги сделать школьное сообщество сильнее.'}</p></div>
+  ${btn(t.join,'data-action="open-auth"')}
+ </section>`;
+}
 function ideaCard(x){return `<article class="idea-card"><div class="card-topline">${tag(x.category,'blue')}${tag(statusName(x.status),x.status==='review'?'gold':'')}</div><h3>${esc(x.title)}</h3><p>${esc(x.description)}</p><div class="meta-line"><span>${scopeLabel(x.scope)} · ${esc(x.target)}</span><span>${dateLabel(x.created)}</span></div><div class="card-bottom"><span class="small-note">${x.support} откликов · внутреннее обсуждение</span><div class="action-row">${btn('Подробнее','data-view-idea="'+esc(x.id)+'"','btn-outline btn-small')}${favoriteButton('idea',x.id)}${x.status==='open'?(x.supportedByMe?'<button class="btn btn-small btn-soft" disabled>Поддержано</button>':btn('Поддержать','data-support-idea="'+esc(x.id)+'"','btn-soft btn-small')):''}</div></div></article>`;}
 function ideas(){const visible=db.ideas.filter(x=>x.status!=='review'||state.realAdmin);return `${heading('ИДЕИ И ОБРАТНАЯ СВЯЗЬ','Предложения сообщества','Внутреннее обсуждение школьных улучшений. Это не юридическая петиция и не официальный канал обращений.',btn('＋ Создать предложение','data-action="new-idea"'))}<div class="notice gold" style="margin-bottom:14px">Можно описывать школьные задачи и предлагать решения. Не добавляй персональные жалобы и сведения о конкретных людях. Поддержка идеи — необязательное мнение, а не юридическая подпись.</div><div class="toolbar"><input class="search-input" id="ideaSearch" placeholder="Поиск по предложениям…"><select class="filter-select" id="ideaScope"><option value="all">Все территории</option><option value="school">Школа</option><option value="district">Район</option><option value="city">Город</option></select><select class="filter-select" id="ideaStatus"><option value="all">Все статусы</option><option value="open">Обсуждается</option><option value="in_progress">В работе</option><option value="accepted">Принято</option></select></div><div class="list-grid" id="ideaList">${visible.map(ideaCard).join('')||'<div class="empty-state">Пока нет доступных предложений. Создай первую идею.</div>'}</div>`;}
 function electionCard(e){const stages={draft:['Черновик','gray'],nominations:['Приём заявок','gold'],campaign:['Кампания','blue'],voting:['Голосование',''],closed:['Завершено','gray'],cancelled:['Отменено','red']};const [s,c]=stages[e.stage]||['Подготовка','gray'];const approved=e.candidates.filter(c=>c.status==='approved').length;return `<article class="election-card"><div class="card-topline">${tag(e.scope==='school'?'Школьный уровень':e.scope==='district'?'Районный уровень':'Городской уровень','blue')}${tag(s,c)}</div><h3>${esc(e.title)}</h3><p>${esc(e.description)}</p><div class="meta-line"><span>${esc(e.position)}</span><span>${esc(e.target)}</span></div><div class="metric-line"><span>Кандидатов, допущенных к участию</span><strong>${approved}</strong></div><div class="card-bottom"><span class="small-note">${dateLabel(e.votingStart)} — ${dateLabel(e.votingEnd)} · тестовый сценарий</span>${btn('Открыть','data-view-election="'+esc(e.id)+'"','btn-small')}</div></article>`;}
