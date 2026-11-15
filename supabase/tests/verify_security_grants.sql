@@ -85,6 +85,12 @@ begin
       and lower(coalesce(qual,'')) like '%select public.is_verification_representative()%'
   ) then raise exception 'role_assignments_select_policy_initplan_missing'; end if;
 
+  if to_regclass('public.project_join_requests') is null
+     or has_column_privilege('authenticated','public.project_join_requests','status','UPDATE')
+     or has_column_privilege('authenticated','public.project_join_requests','updated_at','UPDATE') then
+    raise exception 'project_join_request_direct_status_update_still_allowed_or_table_missing';
+  end if;
+
   if not has_column_privilege('authenticated','public.profiles','display_name','UPDATE')
      or not has_column_privilege('authenticated','public.profiles','preferred_language','UPDATE')
      or not has_column_privilege('authenticated','public.profiles','grade_label','UPDATE')
@@ -119,4 +125,9 @@ select
 union all
 select
   'profile_school_locked',
-  not has_column_privilege('authenticated','public.profiles','school_id','UPDATE');
+  not has_column_privilege('authenticated','public.profiles','school_id','UPDATE')
+union all
+select
+  'project_join_request_rpc_only',
+  not has_column_privilege('authenticated','public.project_join_requests','status','UPDATE')
+    and not has_column_privilege('authenticated','public.project_join_requests','updated_at','UPDATE');
