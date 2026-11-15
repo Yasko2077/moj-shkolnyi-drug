@@ -26,9 +26,9 @@ for (const path of ['app.js', 'cloud.js', 'supabase-config.js']) {
 }
 
 const config = read('supabase-config.js');
-check(/supabasePublishableKey:\s*["']["']/.test(config),
+check(config.includes('supabasePublishableKey: ""'),
   'The public Supabase key must remain blank in the repository.');
-check(/enableHostedAI:\s*false/.test(config), 'Hosted AI must remain disabled by default.');
+check(config.includes('enableHostedAI: false'), 'Hosted AI must remain disabled by default.');
 for (const flag of [
   'enableCloudInitiatives',
   'enableCloudProjects',
@@ -36,28 +36,30 @@ for (const flag of [
   'enableCloudContent',
   'enableCloudElections'
 ]) {
-  check(new RegExp(`${flag}:\\s*false`).test(config),
-    `${flag} must remain disabled by default.`);
+  check(config.includes(`${flag}: false`), `${flag} must remain disabled by default.`);
 }
 check(!/(?:service_role|sb_secret|sk-[A-Za-z0-9]{20,})/i.test(config),
   'A server-side or provider secret-like value was found in browser config.');
 
 const election = read('supabase/patches/20261115_elections_foundation.sql');
-const receiptMatch = election.match(/create table if not exists public\\.election_voter_receipts \\(([\\s\\S]*?)\\n\\);/);
-const ballotMatch = election.match(/create table if not exists public\\.election_ballots \\(([\\s\\S]*?)\\n\\);/);
-check(Boolean(receiptMatch), 'Election voter receipt table definition is missing.');
-check(Boolean(ballotMatch), 'Election ballot table definition is missing.');
-if (receiptMatch) {
-  check(!/ballot_id|candidate_id/.test(receiptMatch[1]),
-    'Voter receipt must not link the account to a ballot or candidate.');
+function sqlTableBody(tableName) {
+  const marker = `create table if not exists public.${tableName} (`;
+  const start = election.indexOf(marker);
+  if (start < 0) return '';
+  const end = election.indexOf('\\n);', start);
+  return end < 0 ? '' : election.slice(start, end);
 }
-if (ballotMatch) {
-  check(!/user_id|cast_at/.test(ballotMatch[1]),
-    'Ballots must not contain voter IDs or per-ballot timestamps.');
-}
+const receiptBody = sqlTableBody('election_voter_receipts');
+const ballotBody = sqlTableBody('election_ballots');
+check(Boolean(receiptBody), 'Election voter receipt table definition is missing.');
+check(Boolean(ballotBody), 'Election ballot table definition is missing.');
+check(!/ballot_id|candidate_id/.test(receiptBody),
+  'Voter receipt must not link the account to a ballot or candidate.');
+check(!/user_id|cast_at/.test(ballotBody),
+  'Ballots must not contain voter IDs or per-ballot timestamps.');
 check(election.includes('primary key(election_id,user_id)'),
   'One-vote-per-account unique receipt key is missing.');
-check(/from public\\.elections where id=p_election_id for update/i.test(election),
+check(election.includes('from public.elections where id=p_election_id for update'),
   'Vote RPC must lock the election row before checking/inserting a vote.');
 check(election.includes('revoke all on public.elections,public.election_candidates,public.election_eligibility,'),
   'Direct client table privileges must be revoked for election data.');
@@ -65,7 +67,7 @@ check(election.includes('revoke all on function public.cast_election_vote(uuid,u
   'Anonymous/public execution of the vote RPC must be revoked.');
 check(election.includes('grant execute on function public.cast_election_vote(uuid,uuid) to authenticated;'),
   'Authenticated vote RPC grant is missing.');
-check(election.includes('stage in (\'objections\',\'certified\')'),
+check(election.includes("stage in ('objections','certified')"),
   'Election results must not be visible before the objection stage.');
 check(!election.includes('insert into public.election_voter_receipts(election_id,user_id,ballot_id)'),
   'Vote receipt must not store a ballot identifier.');
@@ -73,7 +75,7 @@ check(!election.includes('insert into public.election_voter_receipts(election_id
 const profilePatch = read('supabase/patches/20261115_profile_school_integrity.sql');
 check(profilePatch.includes('grant update (display_name, preferred_language, grade_label) on public.profiles'),
   'Profile self-update must be restricted to display name, language, and grade.');
-check(!/grant update\\s*\\([^)]*school_id/i.test(profilePatch),
+check(!profilePatch.includes('grant update (school_id'),
   'Self-service profile update must not grant school_id changes.');
 
 const cloud = read('cloud.js');
@@ -95,7 +97,7 @@ check(matrix.includes('35. Квитанция не содержит'),
 
 if (errors.length) {
   for (const error of errors) console.error(`FAIL: ${error}`);
-  console.error(`\\n${errors.length} check(s) failed.`);
+  console.error(`${errors.length} check(s) failed.`);
   process.exitCode = 1;
 } else {
   console.log('All static project checks passed.');
