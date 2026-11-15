@@ -286,7 +286,7 @@ for (const policyName of [
 ]) {
   check(rlsTuning.includes(policyName), `RLS initplan tuning must recreate ${policyName}.`);
 }
-check((rlsTuning.match(/\\(select auth\\.uid\\(\\)\\)/g) || []).length >= 5,
+check((rlsTuning.split('(select auth.uid())').length - 1) >= 5,
   'RLS policies should wrap auth.uid() in scalar SELECT initplans.');
 check(rlsTuning.includes('(select public.is_verification_representative())'),
   'RLS verifier checks should be evaluated as statement initplans.');
