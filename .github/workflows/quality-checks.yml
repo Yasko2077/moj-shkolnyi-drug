@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: yntymak-quality-v2-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   static-checks:
