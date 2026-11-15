@@ -41,7 +41,12 @@ revoke all on function public.publish_news_post(text,text,text) from public, ano
 grant execute on function public.publish_news_post(text,text,text) to authenticated;
 
 -- Prevent direct client-side draft publishing or editing of published news.
-revoke insert, update, delete on public.news_posts from anon, authenticated;
+revoke all privileges on table public.news_posts from anon, authenticated;
+-- Remove historical column-level grants as well as table-level grants.
+revoke insert (created_by,title,body,category,is_published)
+  on public.news_posts from anon, authenticated;
+revoke update (title,body,category,is_published)
+  on public.news_posts from anon, authenticated;
 grant select on public.news_posts to authenticated;
 
 comment on function public.publish_news_post(text,text,text) is
