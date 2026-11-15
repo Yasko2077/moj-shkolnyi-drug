@@ -146,3 +146,6 @@
 51. `has_column_privilege('authenticated','public.poll_options','label','INSERT')` и `...,'UPDATE'` возвращают `false`; варианты создаются только через `create_community_poll()`.
 52. Для `profiles` UPDATE разрешён только полям `display_name`, `preferred_language`, `grade_label`; UPDATE `school_id`, `id`, `created_at`, `updated_at` запрещён.
 53. До установки `get_event_roster(uuid)` вызов старой `get_event_roster(text)` отклоняется; после установки UUID-версии проверяется собственник мероприятия и соответствующая активная территориальная роль.
+### Автоматическая проверка ACL в staging
+
+После применения полного проверенного набора миграций запустить `supabase/tests/verify_security_grants.sql` в SQL Editor staging-проекта. Скрипт проверяет только метаданные прав и наличие RPC; он не читает строки учеников и не меняет схему или данные. Скрипт намеренно завершится ошибкой, если набор миграций неполон. Не запускать его как замену проверки на рабочей базе.
