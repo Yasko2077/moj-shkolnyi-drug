@@ -57,6 +57,7 @@ begin
            r.participation_format, r.team_name, r.created_at
     from public.event_registrations r
     where r.event_id = v_event.id and r.status = 'registered'
+      and r.organizer_access_consent is true
     order by r.created_at asc;
 end;
 $roster$;
@@ -65,4 +66,4 @@ revoke all on function public.get_event_roster(uuid) from public, anon;
 grant execute on function public.get_event_roster(uuid) to authenticated;
 
 comment on function public.get_event_roster(uuid) is
-'Returns participant roster for one exact event only to its creator, active city-level representatives or the matching district chair. The trusted platform verifier can view only events they created unless they also hold an active city/district role. School-level access remains disabled pending verified event-school ownership.';
+'Returns participant roster for one exact event only to its creator, active city-level representatives or the matching district chair, and only for participants who consented to organizer access. The trusted platform verifier can view only events they created unless they also hold an active city/district role. School-level access remains disabled pending verified event-school ownership.';
