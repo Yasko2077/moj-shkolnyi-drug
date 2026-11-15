@@ -59,7 +59,7 @@
   }
   async function signUp({ email, password, displayName, language = 'ru', captchaToken = '' }) {
     const c = getClient(); if (!c) throw new Error('Подключение Supabase ещё не настроено.');
-    if (cfg.enableSelfServiceSignup !== true) {
+    if (cfg.enableSelfServiceSignup !== true || cfg.enableAuthCaptcha !== true) {
       throw new Error('Самостоятельная регистрация пока закрыта. Попроси организатора прислать персональное приглашение.');
     }
     if (!String(cfg.turnstileSiteKey || '').trim() || !String(captchaToken || '').trim()) {
