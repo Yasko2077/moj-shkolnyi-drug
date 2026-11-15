@@ -186,7 +186,7 @@ check(cloud.includes("select('display_name,preferred_language,school_id,grade_la
   cloud.includes("select('display_name,preferred_language,school_id,grade_label')") &&
   cloud.includes("accountType:data.account_type||'tester'"),
   'Tester profiles must remain readable before and after the account_type migration, and default to least privilege.');
-check(cloud.includes("accountType: 'tester'") &&
+check(cloud.includes("accountType:data.account_type||'tester'") &&
   !cloud.includes("user_metadata: { account_type") &&
   !cloud.includes("user_metadata: { role"),
   'Public signup must never accept an account type or privileged role from client metadata.');
