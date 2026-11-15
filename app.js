@@ -136,7 +136,7 @@ $('#pageContent').addEventListener('click',e=>{
  const si=e.target.closest('[data-support-idea]');if(si){const x=db.ideas.find(i=>i.id===si.dataset.supportIdea);if(x){if(x.supportedByMe){toast('Ты уже поддержал(а) эту идею в этом браузере.');return;}x.supportedByMe=true;x.support++;persist();render();toast('Тестовый отклик учтён.');}return;}
  const ve=e.target.closest('[data-view-election]');if(ve){viewElection(ve.dataset.viewElection);return;}
  const vp=e.target.closest('[data-view-project]');if(vp){viewProject(vp.dataset.viewProject);return;}
- const jp=e.target.closest('[data-join-project]');if(jp){const x=db.projects.find(i=>i.id===jp.dataset.joinProject);if(x){if(x.joinedByMe){toast('Ты уже в этой демо-команде.');return;}x.joinedByMe=true;x.members++;persist();render();toast('В демо ты добавлен(а) в команду.');}return;}
+ const jp=e.target.closest('[data-join-project]');if(jp){const x=db.projects.find(i=>i.id===jp.dataset.joinProject);if(x){if(x.joinedByMe){toast('Заявка уже отправлена.');return;}if(x.source==='cloud'){if(!window.YntymakCloud?.projectsEnabled()||!window.YntymakCloud?.getSession()){toast('Для заявки войди в аккаунт.');return;}try{await window.YntymakCloud.requestToJoinProject(x.id);x.joinedByMe=true;persist();render();toast('Заявка отправлена владельцу проекта.');}catch(err){toast(err.message||'Не удалось отправить заявку.');}return;}x.joinedByMe=true;x.members++;persist();render();toast('В демо ты добавлен(а) в команду.');}return;}
  const re=e.target.closest('[data-register-event]');if(re){registerEvent(re.dataset.registerEvent);return;}
  const sv=e.target.closest('[data-vote-survey]');if(sv){const poll=db.surveys.find(x=>x.id===sv.dataset.voteSurvey);if(!poll||poll.myChoice!==null){toast('Ответ уже сохранён в этом браузере.');return;}modal(poll.title,`<form id="surveyVoteForm" data-survey="${esc(poll.id)}" class="field-grid">${poll.options.map((o,i)=>`<label class="field"><span><input type="radio" name="choice" value="${i}" required> ${esc(o)}</span></label>`).join('')}<div class="field full form-actions"><button type="button" class="btn btn-outline" data-close-modal>Отмена</button><button class="btn" type="submit">Отправить мнение</button></div></form><p class="lang-hint">Необязательный учебный опрос; не для официальных решений.</p>`);return;}
  const prompt=e.target.closest('[data-prompt]');if(prompt){sendChat(prompt.dataset.prompt);return;}
@@ -164,7 +164,17 @@ document.addEventListener('submit',async e=>{
   db.ideas.unshift({id:'IDEA-'+Date.now(),...payload,district:payload.district,status:'review',created:new Date().toISOString().slice(0,10),author:db.profile.name,support:0,response:'',comments:[]});
   persist();closeModal();go('ideas');toast('Предложение сохранено только в этом браузере (демо).');
  }
- if(f.id==='projectForm'){e.preventDefault();const d=new FormData(f);db.projects.unshift({id:'PR-'+Date.now(),title:d.get('title').trim(),description:d.get('description').trim(),category:d.get('category'),scope:d.get('scope'),target:d.get('target').trim(),district:'',stage:'team',owner:db.profile.name,members:1,created:new Date().toISOString().slice(0,10),tasks:[d.get('firstTask').trim(),'Согласовать план с куратором','Проверить результат']});persist();closeModal();go('projects');toast('Проект создан в тестовом браузере.');}
+ if(f.id==='projectForm'){
+ e.preventDefault();const d=new FormData(f);
+ const payload={title:d.get('title').trim(),description:d.get('description').trim(),category:d.get('category'),scope:d.get('scope'),target:d.get('target').trim(),district:db.profile.district||'',firstTask:d.get('firstTask').trim()};
+ if(window.YntymakCloud?.projectsEnabled()&&window.YntymakCloud?.getSession()){
+  try{await window.YntymakCloud.createProject(payload);db.projects=await window.YntymakCloud.listProjects();persist();closeModal();go('projects');toast('Проект отправлен на модерацию.');}
+  catch(err){toast(err.message||'Не удалось сохранить проект в облаке.');}
+  return;
+ }
+ db.projects.unshift({id:'PR-'+Date.now(),...payload,stage:'team',owner:db.profile.name,members:1,created:new Date().toISOString().slice(0,10),tasks:[payload.firstTask,'Согласовать план с куратором','Проверить результат']});
+ persist();closeModal();go('projects');toast('Проект создан только в этом браузере (демо).');
+}
  if(f.id==='candidateForm'){e.preventDefault();const d=new FormData(f),el=db.elections.find(x=>x.id===f.dataset.election);if(!el||el.stage!=='nominations')return;el.candidates.push({id:'C-'+Date.now(),name:d.get('name').trim(),program:d.get('program').trim(),status:'pending'});persist();closeModal();render();toast('Заявка кандидата отправлена на проверку. Взнос не предусмотрен.');}
  if(f.id==='registrationForm'){e.preventDefault();const d=new FormData(f),el=db.events.find(x=>x.id===f.dataset.event);if(!el||el.registered>=el.capacity)return;if(db.registrations.some(x=>x.eventId===el.id&&x.owner==='local-profile')){toast('Ты уже зарегистрирован(а) на это событие.');return;}db.registrations.push({id:'REG-'+Date.now(),eventId:el.id,eventTitle:el.title,name:d.get('name').trim(),school:d.get('school').trim(),grade:d.get('grade').trim(),owner:'local-profile',status:'Подтверждена в демо'});el.registered++;persist();closeModal();render();toast('Заявка зарегистрирована в локальном демо.');}
  if(f.id==='profileForm'){e.preventDefault();const d=new FormData(f);db.profile={...db.profile,name:d.get('name').trim(),school:d.get('school').trim(),district:d.get('district'),grade:d.get('grade').trim(),about:d.get('about').trim()};persist();render();toast('Профиль сохранён в этом браузере.');}
@@ -187,10 +197,10 @@ if(window.YntymakCloud?.configured()){
  window.YntymakCloud.init().then(async result=>{
   state.admin=!!result.isAdmin;state.realAdmin=!!result.isAdmin;
   if(window.YntymakCloud.initiativesEnabled() && result.session){
-   try{
-    const cloudIdeas=await window.YntymakCloud.listInitiatives();
-    db.ideas=cloudIdeas;
-   }catch(e){console.warn('Cloud initiatives unavailable:',e.message);}
+   try{db.ideas=await window.YntymakCloud.listInitiatives();}catch(e){console.warn('Cloud initiatives unavailable:',e.message);}
+  }
+  if(window.YntymakCloud.projectsEnabled() && result.session){
+   try{db.projects=await window.YntymakCloud.listProjects();}catch(e){console.warn('Cloud projects unavailable:',e.message);}
   }
   render();
  }).catch(e=>console.warn('Supabase initialization:',e.message));
