@@ -189,8 +189,7 @@ if(window.YntymakCloud?.configured()){
   if(window.YntymakCloud.initiativesEnabled() && result.session){
    try{
     const cloudIdeas=await window.YntymakCloud.listInitiatives();
-    const localIdeas=db.ideas.filter(x=>x.source!=='cloud');
-    db.ideas=[...cloudIdeas,...localIdeas];
+    db.ideas=cloudIdeas;
    }catch(e){console.warn('Cloud initiatives unavailable:',e.message);}
   }
   render();
