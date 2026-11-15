@@ -1,0 +1,66 @@
+\set ON_ERROR_STOP on
+
+-- Synthetic-only project owner and applicant were inserted by smoke_event_security.psql.
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',false);
+
+insert into public.student_projects(
+  created_by,title,description,category,scope,target_label,district_key,first_task,status
+) values(
+  auth.uid(),'Synthetic school project','This is a synthetic project used for access-control tests.',
+  'community','city','Bishkek',null,'Prepare a test plan','review'
+) returning id as project_id \gset
+
+reset role;
+update public.student_projects set status='published' where id=:'project_id'::uuid;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000004',false);
+
+insert into public.project_join_requests(project_id,user_id,message,status)
+values(:'project_id'::uuid,auth.uid(),'Synthetic join request','pending')
+returning id as request_id \gset
+
+-- Direct writes must be blocked; review RPC must atomically update request and membership.
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000003',false);
+do $direct_write$
+declare
+  v_request uuid := :'request_id'::uuid;
+begin
+  begin
+    update public.project_join_requests
+      set status='accepted',updated_at=now()
+      where id=v_request;
+    raise exception 'direct_project_join_update_was_allowed';
+  exception when insufficient_privilege then
+    null;
+  end;
+end;
+$direct_write$;
+
+select public.review_project_join_request(:'request_id'::uuid,'accepted');
+
+do $membership$
+declare
+  v_project uuid := :'project_id'::uuid;
+  v_count bigint;
+  v_status text;
+begin
+  select member_count into v_count
+  from public.get_project_member_counts()
+  where project_id=v_project;
+  if v_count<>2 then
+    raise exception 'project_membership_count_expected_2_got_%',v_count;
+  end if;
+
+  select status into v_status
+  from public.project_join_requests
+  where id=:'request_id'::uuid;
+  if v_status<>'accepted' then
+    raise exception 'project_join_status_expected_accepted_got_%',v_status;
+  end if;
+end;
+$membership$;
+
+reset role;
+select 'project_membership_scenario_tests_passed' as result;
