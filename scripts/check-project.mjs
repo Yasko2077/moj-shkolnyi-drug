@@ -222,7 +222,7 @@ const newsHardening = read('supabase/patches/20261116_news_publish_atomic.sql');
 check(newsHardening.includes('create or replace function public.publish_news_post(') &&
   newsHardening.includes('public.is_verification_representative()'),
   'News publishing must use a server-side RPC with representative authorization.');
-check(newsHardening.includes('revoke insert, update, delete on public.news_posts from anon, authenticated;'),
+check(newsHardening.includes('revoke all privileges on table public.news_posts from anon, authenticated;') &&\n  newsHardening.includes('revoke insert (created_by,title,body,category,is_published)'),
   'Direct client writes to news posts must be disabled after atomic publishing is introduced.');
 check(newsHardening.includes('drop function if exists public.register_for_event(uuid,text,text,text,text,text);'),
   'Legacy event registration overload must be removed.');
