@@ -26,9 +26,14 @@ const publicConfig = await readFile(path.join(output, "supabase-config.js"), "ut
 if (/suutpjjcendapzpebkcp|sb_publishable_|sb_secret_|service_role/i.test(publicConfig)) {
   throw new Error("The public preview config must not inherit the repository's live Supabase project or credentials.");
 }
-const configMatch = publicConfig.match(/window\\.YNTYMAK_CONFIG\\s*=\\s*(\\{[\\s\\S]*\\});/);
-if (!configMatch) throw new Error("Generated public Supabase config is missing or malformed.");
-const previewConfig = JSON.parse(configMatch[1]);
+const assignmentMarker = "window.YNTYMAK_CONFIG = ";
+const assignmentStart = publicConfig.indexOf(assignmentMarker);
+const jsonStart = assignmentStart < 0 ? -1 : publicConfig.indexOf("{", assignmentStart);
+const jsonEnd = publicConfig.lastIndexOf("};");
+if (jsonStart < 0 || jsonEnd < jsonStart) {
+  throw new Error("Generated public Supabase config is missing or malformed.");
+}
+const previewConfig = JSON.parse(publicConfig.slice(jsonStart, jsonEnd + 1));
 for (const flag of [
   "enableHostedAI",
   "enableCloudInitiatives",
