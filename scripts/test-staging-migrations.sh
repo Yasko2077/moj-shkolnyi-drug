@@ -31,6 +31,7 @@ SQL_FILES=(
   supabase/patches/20261115_elections_foundation.sql
   supabase/patches/20261115_fk_indexes.sql
   supabase/patches/20261116_news_publish_atomic.sql
+  supabase/patches/20261117_rls_initplan_tuning.sql
 )
 
 for file in "${SQL_FILES[@]}"; do
