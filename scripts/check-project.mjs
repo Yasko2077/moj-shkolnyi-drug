@@ -75,8 +75,6 @@ check(election.includes('p_public_name_consent boolean,p_public_program_consent 
   'Candidate submission must require both explicit publication consents.');
 check(election.includes('c.public_name_consent and c.public_program_consent and c.public_consent_at is not null'),
   'Public candidate listing must require both recorded publication consents.');
-check(cloud.includes('publicNameConsent!==true||publicProgramConsent!==true'),
-  'Cloud client must reject candidate submission without both consents.');
 check(election.includes('returns table(objection_id uuid,category text,description text,status text,created_at timestamptz)'),
   'Objection review queue must not return submitter IDs.');
 check(election.includes("stage in ('objections','certified')"),
@@ -102,6 +100,8 @@ const cloud = read('cloud.js');
 const app = read('app.js');
 check(cloud.includes('async function listElectionCandidateApplications(') && cloud.includes('async function listElectionObjections('),
   'Cloud client moderation queue methods are missing.');
+check(cloud.includes('publicNameConsent!==true||publicProgramConsent!==true'),
+  'Cloud client must reject candidate submission without both consents.');
 check(cloud.includes('async function getMyProfile()') && cloud.includes('async function updateMyProfile('),
   'Cloud profile read/update methods are missing.');
 check(app.includes('async function loadCloudProfile()'),
