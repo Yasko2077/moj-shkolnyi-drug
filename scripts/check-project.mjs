@@ -69,6 +69,14 @@ check(election.includes('list_election_candidate_applications(uuid)') && electio
   'Restricted election moderation queue RPCs are missing.');
 check(election.includes('returns table(candidate_id uuid,display_name text,program text,submitted_at timestamptz)'),
   'Candidate review queue must not return voter/account IDs.');
+check(election.includes('public_name_consent boolean not null default false') && election.includes('public_program_consent boolean not null default false'),
+  'Candidate publication consent must default to false.');
+check(election.includes('p_public_name_consent boolean,p_public_program_consent boolean') && election.includes('candidate_publication_consent_required'),
+  'Candidate submission must require both explicit publication consents.');
+check(election.includes('c.public_name_consent and c.public_program_consent and c.public_consent_at is not null'),
+  'Public candidate listing must require both recorded publication consents.');
+check(cloud.includes('publicNameConsent!==true||publicProgramConsent!==true'),
+  'Cloud client must reject candidate submission without both consents.');
 check(election.includes('returns table(objection_id uuid,category text,description text,status text,created_at timestamptz)'),
   'Objection review queue must not return submitter IDs.');
 check(election.includes("stage in ('objections','certified')"),
