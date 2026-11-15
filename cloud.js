@@ -201,6 +201,16 @@
     const {data,error}=await c.rpc('register_for_event',{p_event_id:eventId,p_participant_name:name,p_school_label:school,p_grade_label:grade,p_participation_format:'individual',p_team_name:null});
     if(error) throw error; return data;
   }
+  async function getEventRoster(eventId) {
+    const c=getClient();
+    if(!c||!session) throw new Error('Войди в аккаунт.');
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(eventId||''))) {
+      throw new Error('Некорректный идентификатор мероприятия.');
+    }
+    const {data,error}=await c.rpc('get_event_roster',{p_event_id:eventId});
+    if(error) throw error;
+    return data||[];
+  }
   async function listMyRegistrations() {
     const c=getClient(); if(!c||!session) throw new Error('Нет активной сессии.');
     const {data,error}=await c.from('event_registrations').select('id,event_id,status,created_at,events(title,event_date,place_label)').eq('user_id',session.user.id).order('created_at',{ascending:false});
@@ -260,7 +270,7 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listEvents, createEvent, registerForEvent, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, askHostedAI,
+    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
     initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
