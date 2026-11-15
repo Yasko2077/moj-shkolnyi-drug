@@ -33,6 +33,8 @@ revoke update (
 ) on public.event_registrations from anon, authenticated;
 grant select on public.event_registrations to authenticated;
 revoke all on function public.get_event_roster(text) from public, anon, authenticated;
+-- This legacy helper is no longer part of the client authorization contract.
+revoke all on function public.can_manage_events() from public, anon, authenticated;
 
 create or replace function public.create_platform_event(
   p_event_key text, p_title text, p_description text, p_event_date date,
