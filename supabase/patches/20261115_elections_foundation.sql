@@ -256,6 +256,7 @@ create or replace function public.get_election_results(p_election_id uuid)
 returns table(candidate_id uuid,display_name text,vote_count bigint)
 language plpgsql stable security definer set search_path=public,pg_temp as $function$
 begin
+ if auth.uid() is null then raise exception 'not_authenticated'; end if;
  if not exists(select 1 from public.elections where id=p_election_id and stage in ('objections','certified')) then raise exception 'results_not_available'; end if;
  return query select c.id,c.display_name,count(b.ballot_id)
  from public.election_candidates c
@@ -321,7 +322,8 @@ end $function$;
 
 create or replace function public.get_my_election_receipt(p_election_id uuid)
 returns boolean language sql stable security definer set search_path=public,pg_temp as $function$
- select exists(select 1 from public.election_voter_receipts where election_id=p_election_id and user_id=auth.uid())
+ select auth.uid() is not null
+   and exists(select 1 from public.election_voter_receipts where election_id=p_election_id and user_id=auth.uid())
 $function$;
 
 create or replace function public.get_election_public_candidates(p_election_id uuid)
@@ -331,6 +333,7 @@ language sql stable security definer set search_path=public,pg_temp as $function
  join public.elections e on e.id=c.election_id
  where c.election_id=p_election_id and c.status='approved'
  and e.stage in ('nominations','review','campaign','voting','counting','objections','certified')
+ and auth.uid() is not null
  order by c.submitted_at
 $function$;
 
