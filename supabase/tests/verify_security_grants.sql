@@ -104,6 +104,27 @@ begin
     raise exception 'profile_update_allowlist_invalid';
   end if;
 end;
+
+  if to_regclass('public.profiles') is null
+     or has_column_privilege('authenticated','public.profiles','account_type','UPDATE') then
+    raise exception 'tester_account_type_missing_or_client_writable';
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid='public.profiles'::regclass
+      and conname='profiles_account_type_check'
+      and pg_get_constraintdef(oid) like '%account_type = ''tester''%'
+  ) then
+    raise exception 'tester_account_type_check_constraint_missing';
+  end if;
+
+  if has_table_privilege('authenticated','public.role_assignments','INSERT')
+     or has_table_privilege('authenticated','public.role_assignments','UPDATE')
+     or has_table_privilege('authenticated','public.role_assignments','DELETE') then
+    raise exception 'authenticated_role_can_mutate_role_assignments';
+  end if;
+
 $verify$;
 
 select
@@ -136,3 +157,14 @@ select
   'project_join_request_rpc_only',
   not has_column_privilege('authenticated','public.project_join_requests','status','UPDATE')
     and not has_column_privilege('authenticated','public.project_join_requests','updated_at','UPDATE');
+
+
+select
+  'tester_account_type_server_managed' as check_name,
+  not has_column_privilege('authenticated','public.profiles','account_type','UPDATE') as passed
+union all
+select
+  'role_assignments_not_client_mutable',
+  not has_table_privilege('authenticated','public.role_assignments','INSERT')
+    and not has_table_privilege('authenticated','public.role_assignments','UPDATE')
+    and not has_table_privilege('authenticated','public.role_assignments','DELETE');
