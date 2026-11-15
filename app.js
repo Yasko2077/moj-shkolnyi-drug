@@ -92,8 +92,8 @@ function updateShell(){
  $('#authButton').textContent=session?'Аккаунт / профиль':t('login');
  $('#signOutButton').hidden=!session;
  $('#adminNav').hidden=!state.realAdmin;
- $('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===state.page));
- $('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;el.textContent=t(key);});
+ $$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===state.page));
+ $$('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;el.textContent=t(key);});
  $('#languageBtn').innerHTML=state.lang==='RU'?'RU <span>·</span> KG':'KG <span>·</span> RU';
 }
 function home(){
@@ -217,7 +217,7 @@ function applyEventFilters(){
  const time=$('#eventTime')?.value||'all';
  const today=new Date();today.setHours(0,0,0,0);
  let visible=0;
- $$('#eventList [data-event-card]').forEach(card=>{
+ $$$('#eventList [data-event-card]').forEach(card=>{
   const date=new Date(card.dataset.date+'T12:00:00');
   const matchSearch=!search||card.dataset.search.includes(search);
   const matchCategory=category==='all'||card.dataset.category===category;
@@ -678,7 +678,7 @@ $('#mobileMenu').addEventListener('click',()=>{const open=$('#sidebar').classLis
 document.addEventListener('click',e=>{const p=e.target.closest('[data-page]');if(p&&!$('#pageContent').contains(p))go(p.dataset.page);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 document.addEventListener('change',e=>{const cb=e.target.closest('[data-task-toggle]');if(!cb)return;const p=db.projects.find(x=>x.id===cb.dataset.taskToggle),i=Number(cb.dataset.taskIndex);if(!p||!Number.isInteger(i)||i<0||i>=(p.tasks||[]).length)return;p.completedTasks=Array.isArray(p.completedTasks)?p.completedTasks:[];if(cb.checked&&!p.completedTasks.includes(i))p.completedTasks.push(i);if(!cb.checked)p.completedTasks=p.completedTasks.filter(x=>x!==i);persist();if(cb.closest('#modalRoot')){const pct=p.tasks.length?Math.round(p.completedTasks.length/p.tasks.length*100):0;const bar=$('.task-progress .bar span',$('#modalRoot'));if(bar)bar.style.width=pct+'%';const label=$('.task-progress .meta-line span:last-child',$('#modalRoot'));if(label)label.textContent=pct+'%';cb.closest('.task-line')?.classList.toggle('task-done',cb.checked);}else render();toast(cb.checked?'Шаг отмечен выполненным.':'Отметка снята.');});
-$('#pageContent').addEventListener('input',e=>{if(e.target.id==='eventSearch'){applyEventFilters();return;}if(['ideaSearch','ideaScope','ideaStatus'].includes(e.target.id)){const q=($('#ideaSearch')?.value||'').toLowerCase(),scope=$('#ideaScope')?.value||'all',status=$('#ideaStatus')?.value||'all';$$('#ideaList .idea-card').forEach((el,i)=>{const item=db.ideas.filter(x=>x.status!=='review'||state.realAdmin)[i];el.hidden=!(item&&item.title.toLowerCase().includes(q)&&(scope==='all'||item.scope===scope)&&(status==='all'||item.status===status));});}});
+$('#pageContent').addEventListener('input',e=>{if(e.target.id==='eventSearch'){applyEventFilters();return;}if(['ideaSearch','ideaScope','ideaStatus'].includes(e.target.id)){const q=($('#ideaSearch')?.value||'').toLowerCase(),scope=$('#ideaScope')?.value||'all',status=$('#ideaStatus')?.value||'all';$$$('#ideaList .idea-card').forEach((el,i)=>{const item=db.ideas.filter(x=>x.status!=='review'||state.realAdmin)[i];el.hidden=!(item&&item.title.toLowerCase().includes(q)&&(scope==='all'||item.scope===scope)&&(status==='all'||item.status===status));});}});
 $('#pageContent').addEventListener('change',e=>{if(['eventCategory','eventTime'].includes(e.target.id))applyEventFilters();});
 if(window.YntymakCloud?.configured()){
  window.YntymakCloud.init().then(async result=>{
