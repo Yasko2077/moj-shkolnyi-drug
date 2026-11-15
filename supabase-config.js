@@ -5,5 +5,6 @@ window.YNTYMAK_CONFIG = {
   enableHostedAI: false,
   enableCloudInitiatives: false,
   enableCloudProjects: false,
-  enableCloudEvents: false
+  enableCloudEvents: false,
+  enableCloudContent: false
 };
