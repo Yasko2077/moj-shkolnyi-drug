@@ -131,7 +131,7 @@ async function sendChat(q,forceLocal=false){
 function addAudit(text){db.audit.push({text,date:new Date().toLocaleString('ru-RU')});persist();}
 function exportData(){const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='yntymak-demo-export.json';a.click();URL.revokeObjectURL(a.href);toast('Экспортированы только локальные тестовые данные.');}
 // Actions and navigation
-$('#pageContent').addEventListener('click',e=>{
+$('#pageContent').addEventListener('click',async e=>{
  const p=e.target.closest('[data-page]');if(p){go(p.dataset.page);return;}
  const a=e.target.closest('[data-action]');if(a){const action=a.dataset.action;if(action==='new-idea')newIdea();if(action==='new-project')newProject();if(action==='new-election')newElection();if(action==='new-event')newEvent();if(action==='new-news')newNews();if(action==='new-poll')newPoll();if(action==='export'&&state.realAdmin)exportData();return;}
  const vi=e.target.closest('[data-view-idea]');if(vi){viewIdea(vi.dataset.viewIdea);return;}
