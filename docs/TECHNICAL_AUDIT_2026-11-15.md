@@ -110,3 +110,5 @@ RLS включён на всех семи таблицах. Найдены по�
 - Все 16 SQL-патчей повторно проверены вместе в одной транзакции BEGIN … ROLLBACK. Дополнительно вызваны новые и основные election RPC без авторизации: функции компилируются и отклоняют анонимный вызов. ACL-проверка подтвердила отсутствие прямого чтения ballot/receipt/eligibility/candidate tables от authenticated и отсутствие execute для anon на vote RPC.
 - JavaScript синтаксис app.js, cloud.js и supabase-config.js проверен через JS parser; эквивалентные статические проверки конфигурации, профиля, языка и выборов прошли.
 - Не выполнялись тесты с реальными пользователями; функции не развёрнуты, production схема не изменялась, все feature flags выключены.
+
+- Добавлен GitHub Actions workflow .github/workflows/quality-checks.yml. Фактический запуск на commit 20b242b07eab1dab5e94c82fb58a12f5fff0f5b3 завершился `success`; Node.js 22 выполнил scripts/check-project.mjs. Первый запуск выявил ошибку порядка объявления переменной в тестовом скрипте, она исправлена до успешного повторного запуска.
