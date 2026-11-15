@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "Ынтымак — ученическое сообщество Бишкека",
+  "short_name": "Ынтымак",
+  "description": "Платформа школьных инициатив, проектов и мероприятий Бишкека.",
+  "lang": "ru-KG",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#071426",
+  "theme_color": "#071426",
+  "categories": ["education", "social"],
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
