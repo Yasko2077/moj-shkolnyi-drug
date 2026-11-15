@@ -40,4 +40,5 @@ for file in "${SQL_FILES[@]}"; do
 done
 
 psql -v ON_ERROR_STOP=1 -f supabase/tests/verify_security_grants.sql
-echo "Fresh PostgreSQL 17 schema bootstrap and ordered migrations passed."
+psql -v ON_ERROR_STOP=1 -f supabase/tests/smoke_event_security.psql
+echo "Fresh PostgreSQL 17 bootstrap, ordered migrations, ACL checks, and event scenarios passed."
