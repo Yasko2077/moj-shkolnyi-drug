@@ -186,7 +186,38 @@ function nominate(id){
  <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit">Отправить на проверку</button></div>
  </form>`);
 }
-function registerEvent(id){const e=db.events.find(x=>x.id===id);if(!e||e.status!=='open'||e.registered>=e.capacity){toast('Регистрация закрыта или мест больше нет.');return;}if(db.registrations.some(r=>r.eventId===id&&r.owner==='local-profile')){toast('В этом тестовом браузере ты уже зарегистрирован(а).');return;}modal('Регистрация на мероприятие',`<form id="registrationForm" data-event="${esc(id)}" class="field-grid"><div class="field full"><label>Имя для списка организатора</label><input name="name" maxlength="70" value="${esc(db.profile.name)}" required></div><div class="field full"><label>Школа (тестовые данные)</label><input name="school" maxlength="120" value="${esc(db.profile.school)}" required></div><div class="field"><label>Класс</label><input name="grade" maxlength="30" value="${esc(db.profile.grade)}" required></div><div class="field full"><small>В реальном режиме список доступен только организатору с подтверждёнными правами. Не вводи данные других учеников.</small></div><div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit">Подать заявку</button></div></form>`);}
+function registerEvent(id){
+ const e=db.events.find(x=>x.id===id);
+ if(!e||e.status!=='open'||e.registered>=e.capacity){toast('Регистрация закрыта или мест больше нет.');return;}
+ if(db.registrations.some(r=>r.eventId===id&&r.owner==='local-profile')){toast('В этом тестовом браузере ты уже зарегистрирован(а).');return;}
+ const cloudMode=e.source==='cloud'&&Boolean(window.YntymakCloud?.eventsEnabled())&&Boolean(window.YntymakCloud?.getSession());
+ if(cloudMode){
+  const t=state.lang==='KG'?{
+   title:'Иш-чарага катталуу',
+   info:'Катталууда аккаунттагы көрсөтүлүүчү ысым, ырасталган мектеп (эгер бар болсо) жана класс профилинен алынат. Бул маалыматтарды иш-чаранын уюштуруучусу гана көрө алат.',
+   consent:'Бул иш-чараны уюштуруу үчүн профилимдеги көрсөтүлүүчү ысымды, мектепти жана классты ыйгарым укуктуу уюштуруучуга берүүгө макулмун. Бул жалпыга ачык тизме эмес.',
+   cancel:'Жокко чыгаруу',submit:'Катталуу'
+  }:{
+   title:'Регистрация на мероприятие',
+   info:'Для регистрации имя для отображения, подтверждённая школа (если она есть) и класс берутся из профиля. Эти сведения доступны только создателю события или уполномоченному представителю в пределах его полномочий.',
+   consent:'Я согласен(на) предоставить моё имя для отображения, школу и класс из профиля создателю или уполномоченному организатору именно этого мероприятия. Это не публичный список.',
+   cancel:'Отмена',submit:'Зарегистрироваться'
+  };
+  modal(t.title,`<form id="registrationForm" data-event="${esc(id)}" class="field-grid">
+   <div class="notice gold">${t.info}</div>
+   <div class="field full"><label class="lang-hint"><input type="checkbox" name="organizerAccessConsent" required> ${t.consent}</label></div>
+   <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>${t.cancel}</button><button class="btn" type="submit">${t.submit}</button></div>
+  </form>`);
+  return;
+ }
+ modal('Регистрация на мероприятие',`<form id="registrationForm" data-event="${esc(id)}" class="field-grid">
+  <div class="notice gold">Это локальное демо. Используй только вымышленные данные, не указывай настоящие персональные данные школьников.</div>
+  <div class="field full"><label>Имя для демо-списка</label><input name="name" maxlength="70" value="${esc(db.profile.name)}" required></div>
+  <div class="field full"><label>Школа (демо)</label><input name="school" maxlength="120" value="${esc(db.profile.school)}" required></div>
+  <div class="field"><label>Класс (демо)</label><input name="grade" maxlength="30" value="${esc(db.profile.grade)}" required></div>
+  <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit">Подать заявку</button></div>
+ </form>`);
+}
 async function adminRoster(id){
  if(!state.realAdmin){toast('Недостаточно прав.');return;}
  const e=db.events.find(x=>x.id===id);if(!e)return;
@@ -282,7 +313,7 @@ document.addEventListener('submit',async e=>{
  persist();closeModal();go('projects');toast('Проект создан только в этом браузере (демо).');
 }
  if(f.id==='candidateForm'){e.preventDefault();const d=new FormData(f),el=db.elections.find(x=>x.id===f.dataset.election);if(!el||el.stage!=='nominations')return;if(d.get('publicNameConsent')!=='on'||d.get('publicProgramConsent')!=='on'){toast('Нужно отдельно подтвердить публикацию имени и программы.');return;}el.candidates.push({id:'C-'+Date.now(),name:d.get('name').trim(),program:d.get('program').trim(),publicNameConsent:true,publicProgramConsent:true,publicConsentAt:new Date().toISOString(),status:'pending'});persist();closeModal();render();toast('Заявка кандидата отправлена на проверку. Подача бесплатная.');}
- if(f.id==='registrationForm'){e.preventDefault();const d=new FormData(f),el=db.events.find(x=>x.id===f.dataset.event);if(!el||el.registered>=el.capacity)return;if(el.source==='cloud'&&window.YntymakCloud?.eventsEnabled()){try{await window.YntymakCloud.registerForEvent({eventId:el.id,name:d.get('name').trim(),school:d.get('school').trim(),grade:d.get('grade').trim()});closeModal();toast('Заявка зарегистрирована. Список доступен организатору.');}catch(err){toast(err.message||'Не удалось зарегистрироваться.');}return;}if(db.registrations.some(x=>x.eventId===el.id&&x.owner==='local-profile')){toast('Ты уже зарегистрирован(а) на это событие.');return;}db.registrations.push({id:'REG-'+Date.now(),eventId:el.id,eventTitle:el.title,name:d.get('name').trim(),school:d.get('school').trim(),grade:d.get('grade').trim(),owner:'local-profile',status:'Подтверждена в демо'});el.registered++;persist();closeModal();render();toast('Заявка зарегистрирована в локальном демо.');}
+ if(f.id==='registrationForm'){e.preventDefault();const d=new FormData(f),el=db.events.find(x=>x.id===f.dataset.event);if(!el||el.registered>=el.capacity)return;if(el.source==='cloud'&&window.YntymakCloud?.eventsEnabled()&&window.YntymakCloud?.getSession()){try{await window.YntymakCloud.registerForEvent({eventId:el.id,organizerAccessConsent:d.get('organizerAccessConsent')==='on'});db.events=await window.YntymakCloud.listEvents();closeModal();render();toast('Регистрация сохранена. Данные профиля доступны только уполномоченному организатору этого события.');}catch(err){toast(err.message||'Не удалось зарегистрироваться.');}return;}if(db.registrations.some(x=>x.eventId===el.id&&x.owner==='local-profile')){toast('Ты уже зарегистрирован(а) на это событие.');return;}db.registrations.push({id:'REG-'+Date.now(),eventId:el.id,eventTitle:el.title,name:String(d.get('name')||'').trim(),school:String(d.get('school')||'').trim(),grade:String(d.get('grade')||'').trim(),owner:'local-profile',status:'Подтверждена в демо'});el.registered++;persist();closeModal();render();toast('Заявка зарегистрирована в локальном демо.');}
  if(f.id==='profileForm'){e.preventDefault();const d=new FormData(f);const about=String(d.get('about')||'').trim();if(state.cloudProfile&&window.YntymakCloud?.getSession()){try{const saved=await window.YntymakCloud.updateMyProfile({displayName:String(d.get('name')||'').trim(),gradeLabel:String(d.get('grade')||'').trim(),language:langCode()});db.profile={...db.profile,name:saved.displayName,school:saved.schoolName,district:saved.districtKey,grade:saved.gradeLabel,verified:Boolean(saved.schoolId),about,source:'cloud'};persist();render();toast('Имя и класс синхронизированы. Поле «О себе» осталось только в этом браузере.');}catch(err){toast(err.message||'Не удалось обновить облачный профиль.');}return;}db.profile={...db.profile,name:String(d.get('name')||'').trim(),school:String(d.get('school')||'').trim(),district:String(d.get('district')||''),grade:String(d.get('grade')||'').trim(),about};persist();render();toast('Демонстрационный профиль сохранён только в этом браузере.');}
  if(f.id==='chatForm'){e.preventDefault();const q=$('#chatInput').value.trim();await sendChat(q);}
  if(f.id==='surveyVoteForm'){e.preventDefault();const d=new FormData(f),poll=db.surveys.find(x=>x.id===f.dataset.survey),i=Number(d.get('choice'));if(!poll||poll.myChoice!==null||!Number.isInteger(i)||i<0||i>=poll.votes.length)return;if(poll.source==='cloud'&&window.YntymakCloud?.contentEnabled()){try{await window.YntymakCloud.castPollVote(poll.id,poll.optionIds[i]);db.surveys=await window.YntymakCloud.listPolls();closeModal();render();toast('Ответ принят.');}catch(err){toast(err.message||'Не удалось отправить ответ.');}return;}poll.votes[i]++;poll.myChoice=i;persist();closeModal();render();toast('Тестовый ответ учтён.');}
