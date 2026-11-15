@@ -81,7 +81,7 @@ function favoriteItem(item){if(!item)return '';return item.type==='idea'?db.idea
 function updateShell(){
  document.documentElement.lang=state.lang==='KG'?'ky':'ru';
  const p=db.profile,session=window.YntymakCloud?.getSession();
- const stagingConnected=Boolean(window.YntymakCloud?.configured() && window.YntymakCloud?.initiativesEnabled());
+ const stagingConnected=typeof window !== 'undefined' && Boolean(window.YntymakCloud?.configured() && window.YntymakCloud?.initiativesEnabled());
  $('#sidebarName').textContent=p.name||'Гость';
  $('#sidebarMeta').textContent=session?(state.realAdmin?'Администратор':'Тестировщик'):stagingConnected?'Вход по приглашению':(p.school||'Демо-профиль');
  $('#sidebarAvatar').textContent=initials(p.name);
@@ -99,7 +99,7 @@ function updateShell(){
 }
 function home(){
  const kg=state.lang==='KG';
- const stagingConnected=Boolean(window.YntymakCloud?.configured() && window.YntymakCloud?.initiativesEnabled());
+ const stagingConnected=typeof window !== 'undefined' && Boolean(window.YntymakCloud?.configured() && window.YntymakCloud?.initiativesEnabled());
  const t=kg?{
   eyebrow:'БИШКЕК · ОКУУЧУЛАРДЫН ӨЗҮН-ӨЗҮ БАШКАРУУСУ',
   title:'Шаар окуучулар катышканда өзгөрөт.',
