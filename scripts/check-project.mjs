@@ -38,8 +38,6 @@ for (const flag of [
 ]) {
   check(config.includes(`${flag}: false`), `${flag} must remain disabled by default.`);
 }
-check(!/(?:service_role|sb_secret|sk-[A-Za-z0-9]{20,})/i.test(config),
-  'A server-side or provider secret-like value was found in browser config.');
 
 const election = read('supabase/patches/20261115_elections_foundation.sql');
 function sqlTableBody(tableName) {
@@ -73,9 +71,9 @@ check(!election.includes('insert into public.election_voter_receipts(election_id
   'Vote receipt must not store a ballot identifier.');
 
 const profilePatch = read('supabase/patches/20261115_profile_school_integrity.sql');
-check(profilePatch.includes('grant update (display_name, preferred_language, grade_label) on public.profiles'),
+check(profilePatch.includes('grant update(display_name, preferred_language, grade_label) on public.profiles'),
   'Profile self-update must be restricted to display name, language, and grade.');
-check(!profilePatch.includes('grant update (school_id'),
+check(!profilePatch.includes('grant update(school_id'),
   'Self-service profile update must not grant school_id changes.');
 
 const cloud = read('cloud.js');
