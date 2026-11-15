@@ -102,23 +102,56 @@ async function loadCloudProfile(){
 function profile(){
  const p=db.profile,regs=db.registrations.filter(r=>r.owner==='local-profile');
  const cloudMode=state.cloudProfile&&Boolean(window.YntymakCloud?.getSession());
+ const tx=state.lang==='KG'?{
+  kicker:'ЖЕКЕ КАБИНЕТИҢ',title:'Менин профилим',
+  description:'Кызыгууларыңды жана классыңды көрсөт. «Өзүм жөнүндө» талаасы кызмат ордун ырастабайт жана платформада башкаруу укугун бербейт.',
+  schoolNotConfirmed:'Мектеп ырастала элек',pendingSchool:'Азырынча ырасталган эмес',districtPending:'Мектеп ырасталгандан кийин аныкталат',
+  noticeCloud:'Мектепти ыйгарым укуктуу, текшерилген өкүл гана бекитет. Аны же районду өз алдынча өзгөртө албайсың.',
+  noticeLocal:'Мектепке таандык экениңди ыйгарым укуктуу чоң киши өзүнчө ырастайт. Демо нускага документтерди же жеке маалыматтарды жүктөбө.',
+  editProfile:'Профилди өзгөртүү',displayName:'Көрсөтүлүүчү ысым',school:'Мектеп',district:'Район',
+  grade:'Класс',gradePlaceholder:'Мисалы, 9-класс',about:'Өзүм жөнүндө / Ишмердигим',
+  aboutPlaceholder:'Кызыгууларың, долбоорлоруң жана тажрыйбаң тууралуу жаз…',
+  aboutCloudNote:'Бул талаа ушул браузерде гана сакталат, жарыяланбайт жана булутка жөнөтүлбөйт. Жеке байланыш маалыматтарын же башка адамдар тууралуу маалыматтарды жазба.',
+  aboutLocalNote:'Бул талаа ушул браузерде гана сакталат. Башка адамдардын аты-жөнүн, байланыш маалыматтарын жана купуя маалыматтарды жазба.',
+  cloudHint:'Булуттагы аккаунтта аты, тили жана классы гана синхрондолот. Мектепти текшерилген өкүл дайындайт.',
+  localHint:'Бул браузердеги демонстрациялык профиль; өзгөрүүлөр башка колдонуучуларга берилбейт.',
+  save:'Сактоо',regs:'Иш-чараларга катталууларым',
+  none:'Бул браузерде азырынча катталуулар жок. Катышуучулардын толук тизмеси жалпыга көрсөтүлбөйт.',
+  verified:'Мектеп ырасталды',unverified:'Мектеп ырастала элек'
+ }:{
+  kicker:'ТВОЯ УЧЁТНАЯ ЗАПИСЬ',title:'Мой профиль',
+  description:'Укажи интересы и класс. Поле «О себе» не подтверждает должность и не выдаёт административные права.',
+  schoolNotConfirmed:'Школа не подтверждена',pendingSchool:'Пока не подтверждена',districtPending:'Определится после подтверждения школы',
+  noticeCloud:'Школа назначается только подтверждённым представителем. Самостоятельно изменить её или район нельзя.',
+  noticeLocal:'Подтверждение принадлежности к школе выполняется отдельно уполномоченным взрослым координатором. Не прикладывай документы и личные данные в демо.',
+  editProfile:'Редактировать профиль',displayName:'Имя для отображения',school:'Школа',district:'Район',
+  grade:'Класс',gradePlaceholder:'Например, 9 класс',about:'О себе / Моя деятельность',
+  aboutPlaceholder:'Расскажи об интересах, проектах и опыте…',
+  aboutCloudNote:'Это поле сохраняется только в этом браузере, не публикуется и не отправляется в облако. Не пиши личные контакты или сведения о других людях.',
+  aboutLocalNote:'Поле хранится только в этом браузере. Не пиши ФИО других людей, контакты и закрытую информацию.',
+  cloudHint:'В облачном аккаунте синхронизируются только имя, язык и класс. Школу назначает проверенный представитель.',
+  localHint:'Это локальный демонстрационный профиль; изменения не передаются другим пользователям.',
+  save:'Сохранить профиль',regs:'Мои регистрации на события',
+  none:'Личных регистраций в этом браузере пока нет. Полный список участников публично не отображается.',
+  verified:'Школа подтверждена',unverified:'Школа не подтверждена'
+ };
  const schoolControl=cloudMode
-  ? `<input value="${esc(p.school||'Пока не подтверждена')}" readonly disabled>`
-  : `<input name="school" maxlength="120" value="${esc(p.school)}" placeholder="Название школы или номер">`;
+  ? '<input value="'+esc(p.school||tx.pendingSchool)+'" readonly disabled>'
+  : '<input name="school" maxlength="120" value="'+esc(p.school)+'" placeholder="'+esc(tx.school)+'">';
  const districtControl=cloudMode
-  ? `<input value="${esc(distName(p.district)||'Определится после подтверждения школы')}" readonly disabled>`
-  : `<select name="district">${DISTRICTS.map(d=>`<option value="${d.key}" ${p.district===d.key?'selected':''}>${esc(d[state.lang==='KG'?'ky':'ru'])}</option>`).join('')}</select>`;
- return `${heading('ТВОЯ УЧЁТНАЯ ЗАПИСЬ','Мой профиль','Укажи интересы и класс. Поле «О себе» не подтверждает должность и не выдаёт административные права.') }
- <div class="profile-grid"><section class="card profile-card"><div class="profile-big-avatar">${esc(initials(p.name))}</div><h2>${esc(p.name)}</h2><p>${esc(p.school||'Школа не подтверждена')}</p>${tag(p.verified?'Школа подтверждена':'Школа не подтверждена',p.verified?'':'gold')}<div class="notice gold" style="text-align:left;margin-top:16px">${cloudMode?'Школа назначается только подтверждённым представителем. Самостоятельно изменить её или район нельзя.':'Подтверждение принадлежности к школе выполняется отдельно уполномоченным взрослым координатором. Не прикладывай документы и личные данные в демо.'}</div></section>
- <section class="card"><div class="card-title">Редактировать профиль</div><form id="profileForm" class="field-grid">
- <div class="field full"><label>Имя для отображения</label><input name="name" maxlength="70" value="${esc(p.name)}" required></div>
- <div class="field full"><label>Школа</label>${schoolControl}</div>
- <div class="field"><label>Район</label>${districtControl}</div>
- <div class="field"><label>Класс</label><input name="grade" maxlength="30" value="${esc(p.grade)}" placeholder="Например, 9 класс"></div>
- <div class="field full"><label>О себе / Моя деятельность</label><textarea name="about" maxlength="700" placeholder="Расскажи об интересах, проектах и опыте…">${esc(p.about)}</textarea><small>${cloudMode?'Это поле сохраняется только в этом браузере, не публикуется и не отправляется в облако. Не пиши личные контакты или сведения о других людях.':'Поле хранится только в этом браузере. Не пиши ФИО других людей, контакты и закрытую информацию.'}</small></div>
- <div class="field full"><small>${cloudMode?'В облачном аккаунте синхронизируются только имя, язык и класс. Школу назначает проверенный представитель.':'Это локальный демонстрационный профиль; изменения не передаются другим пользователям.'}</small></div>
- <div class="field full form-actions"><button class="btn" type="submit">Сохранить профиль</button></div></form></section></div>
- <div class="section-row"><h2>Мои регистрации на события</h2></div><div class="card">${regs.length?regs.map(r=>`<div class="metric-line"><span>${esc(r.eventTitle)}</span><strong>${esc(r.status)}</strong></div>`).join(''):'<p class="card-sub">Личных регистраций в этом браузере пока нет. Полный список участников публично не отображается.</p>'}</div>`;
+  ? '<input value="'+esc(distName(p.district)||tx.districtPending)+'" readonly disabled>'
+  : '<select name="district">'+DISTRICTS.map(d=>'<option value="'+d.key+'" '+(p.district===d.key?'selected':'')+'>'+esc(d[state.lang==='KG'?'ky':'ru'])+'</option>').join('')+'</select>';
+ return `${heading(tx.kicker,tx.title,tx.description)}
+ <div class="profile-grid"><section class="card profile-card"><div class="profile-big-avatar">${esc(initials(p.name))}</div><h2>${esc(p.name)}</h2><p>${esc(p.school||tx.schoolNotConfirmed)}</p>${tag(p.verified?tx.verified:tx.unverified,p.verified?'':'gold')}<div class="notice gold" style="text-align:left;margin-top:16px">${cloudMode?tx.noticeCloud:tx.noticeLocal}</div></section>
+ <section class="card"><div class="card-title">${tx.editProfile}</div><form id="profileForm" class="field-grid">
+ <div class="field full"><label>${tx.displayName}</label><input name="name" maxlength="70" value="${esc(p.name)}" required></div>
+ <div class="field full"><label>${tx.school}</label>${schoolControl}</div>
+ <div class="field"><label>${tx.district}</label>${districtControl}</div>
+ <div class="field"><label>${tx.grade}</label><input name="grade" maxlength="30" value="${esc(p.grade)}" placeholder="${tx.gradePlaceholder}"></div>
+ <div class="field full"><label>${tx.about}</label><textarea name="about" maxlength="700" placeholder="${tx.aboutPlaceholder}">${esc(p.about)}</textarea><small>${cloudMode?tx.aboutCloudNote:tx.aboutLocalNote}</small></div>
+ <div class="field full"><small>${cloudMode?tx.cloudHint:tx.localHint}</small></div>
+ <div class="field full form-actions"><button class="btn" type="submit">${tx.save}</button></div></form></section></div>
+ <div class="section-row"><h2>${tx.regs}</h2></div><div class="card">${regs.length?regs.map(r=>'<div class="metric-line"><span>'+esc(r.eventTitle)+'</span><strong>'+esc(r.status)+'</strong></div>').join(''):'<p class="card-sub">'+tx.none+'</p>'}</div>`;
 }
 function help(){return `${heading('ПРАВИЛА И ПОДДЕРЖКА','Помощь и безопасность','Платформа предназначена для школьных инициатив и безопасного участия. Она не заменяет официальную помощь или консультацию специалистов.') }<div class="home-grid"><section class="stack"><div class="card"><div class="card-title">Как использовать платформу</div><ul class="rule-list"><li>Пиши уважительно и обсуждай идеи, а не личность человека.</li><li>Не публикуй чужие персональные данные, фотографии документов и контакты.</li><li>Не указывай обвинения против конкретных учеников или сотрудников в публичных разделах.</li><li>Выборы и опросы в демо не являются официальными процедурами.</li><li>Профильная должность не даёт права управлять платформой или видеть закрытые заявки.</li></ul></div><div class="card"><div class="card-title">Школьное самоуправление</div><p class="card-sub">Закон КР «Об образовании» описывает принципы демократизации, автономии и самоуправления образовательных организаций. Вопросы компетенции и порядка выбора органов соуправления определяются законодательством и уставом конкретной школы.</p><a class="text-action" href="https://edu.gov.kg/organizations/8/pages/287/" target="_blank" rel="noopener">Проверить закон на сайте Минпросвещения ↗</a></div></section><aside class="stack"><div class="notice red"><strong>Если ты столкнулся с травлей, угрозами или чувствуешь себя небезопасно</strong><br>Не описывай подробности в публичных предложениях и не отправляй их ИИ. Обратись к родителю или другому взрослому, которому доверяешь, школьному психологу или ответственному сотруднику. При непосредственной опасности попроси взрослого обратиться в экстренные службы.</div><div class="card"><div class="card-title">Официальные ресурсы</div><p class="card-sub">Для сведений о школах и организациях:</p><a class="text-action" href="https://edu.e-meria.kg/schools" target="_blank" rel="noopener">Департамент образования Бишкека ↗</a><p class="card-sub" style="margin-top:13px">Для проверки действующей редакции нормативных актов:</p><a class="text-action" href="https://cbd.minjust.gov.kg/112665/edition/39974/ru" target="_blank" rel="noopener">Централизованный банк данных Минюста ↗</a></div></aside></div>`;}
 function admin(){if(!state.realAdmin)return `${heading('ЗАКРЫТЫЙ РАЗДЕЛ','Панель управления','Доступна только единственной учётной записи, назначенной владельцем Supabase-проекта.') }<div class="notice gold">Подтверждена учётная запись администратора. Данные содержимого этой версии всё ещё хранятся локально в браузере; панель демонстрирует workflow, а не централизованное управление пилотом.</div><div class="admin-tabs">${['overview','ideas','candidates','events','content'].map(k=>`<button class="admin-tab ${state.adminTab===k?'active':''}" data-admin-tab="${k}">${({overview:'Обзор',ideas:'Предложения',candidates:'Кандидаты',events:'Участники событий',content:'Контент'})[k]}</button>`).join('')}</div>${adminTabContent()}`;}
