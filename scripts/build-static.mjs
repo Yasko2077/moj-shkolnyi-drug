@@ -38,15 +38,20 @@ if (requestSelfServiceSignup && !enableAuthCaptcha) {
   throw new Error("Self-service signup cannot be enabled without Auth CAPTCHA.");
 }
 const enableSelfServiceSignup = enableAuthCaptcha && requestSelfServiceSignup;
+const enableCloudModules = truthy(process.env.YNTYMAK_ENABLE_CLOUD_MODULES);
+if (enableCloudModules && (!supabaseUrl || !publishableKey)) {
+  throw new Error("Cloud modules require a separate staging Supabase project and publishable key.");
+}
 
 const browserConfig = {
   supabaseUrl,
   supabasePublishableKey: publishableKey,
   enableHostedAI: false,
-  enableCloudInitiatives: false,
-  enableCloudProjects: false,
-  enableCloudEvents: false,
-  enableCloudContent: false,
+  enableCloudInitiatives: enableCloudModules,
+  enableCloudProjects: enableCloudModules,
+  enableCloudEvents: enableCloudModules,
+  enableCloudContent: enableCloudModules,
+  // Election data is staged but online voting stays disabled pending a separate governance and privacy review.
   enableCloudElections: false,
   enableAuthCaptcha,
   enableSelfServiceSignup,
@@ -89,3 +94,4 @@ await writeFile(
 
 console.log(`Static site built in dist/ (${publicFiles.length + 1} allow-listed files).`);
 console.log(supabaseUrl ? "Preview backend: separate Supabase staging project." : "Preview backend: disconnected demo mode (safe default).");
+console.log(enableCloudModules ? "Cloud modules: enabled for isolated staging." : "Cloud modules: disabled.");

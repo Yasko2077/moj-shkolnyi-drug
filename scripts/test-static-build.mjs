@@ -9,6 +9,7 @@ const outputConfig = path.join(root, "dist", "supabase-config.js");
 const variableNames = [
   "YNTYMAK_SUPABASE_URL",
   "YNTYMAK_SUPABASE_PUBLISHABLE_KEY",
+  "YNTYMAK_ENABLE_CLOUD_MODULES",
   "YNTYMAK_ENABLE_AUTH_CAPTCHA",
   "YNTYMAK_ENABLE_SELF_SERVICE_SIGNUP",
   "YNTYMAK_TURNSTILE_SITE_KEY"
@@ -71,6 +72,10 @@ try {
     YNTYMAK_ENABLE_SELF_SERVICE_SIGNUP: "true"
   }, false, "cannot be enabled without Auth CAPTCHA");
 
+  runBuild("cloud modules without staging backend", {
+    YNTYMAK_ENABLE_CLOUD_MODULES: "true"
+  }, false, "Cloud modules require a separate staging Supabase project");
+
   runBuild("CAPTCHA without a site key", {
     YNTYMAK_SUPABASE_URL: "https://stage-project.supabase.co",
     YNTYMAK_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_only",
@@ -89,6 +94,22 @@ try {
       staging.enableSelfServiceSignup !== false ||
       staging.enableCloudInitiatives !== false) {
     throw new Error("Staging Auth configuration did not retain the intended safe defaults.");
+  }
+
+  runBuild("staging cloud modules", {
+    YNTYMAK_SUPABASE_URL: "https://stage-project.supabase.co",
+    YNTYMAK_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_only",
+    YNTYMAK_ENABLE_CLOUD_MODULES: "true"
+  }, true);
+  const cloudStaging = await readConfig();
+  if (cloudStaging.enableCloudInitiatives !== true ||
+      cloudStaging.enableCloudProjects !== true ||
+      cloudStaging.enableCloudEvents !== true ||
+      cloudStaging.enableCloudContent !== true ||
+      cloudStaging.enableCloudElections !== false ||
+      cloudStaging.enableSelfServiceSignup !== false ||
+      cloudStaging.enableHostedAI !== false) {
+    throw new Error("Staging cloud modules did not retain the intended restricted feature flags.");
   }
 
   runBuild("staging public signup", {
