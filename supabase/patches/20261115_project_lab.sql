@@ -89,15 +89,15 @@ with check (
 );
 
 drop policy if exists project_join_requests_update_owner_or_self on public.project_join_requests;
-create policy project_join_requests_update_owner_or_self on public.project_join_requests for update to authenticated
-using (
-  user_id=(select auth.uid())
-  or exists(select 1 from public.student_projects p where p.id=project_id and p.created_by=(select auth.uid()))
-)
-with check (
-  user_id=(select auth.uid())
-  or exists(select 1 from public.student_projects p where p.id=project_id and p.created_by=(select auth.uid()))
-);
+drop policy if exists project_join_requests_withdraw_self on public.project_join_requests;
+create policy project_join_requests_withdraw_self on public.project_join_requests for update to authenticated
+using (user_id=(select auth.uid()) and status='pending')
+with check (user_id=(select auth.uid()) and status='withdrawn');
+
+drop policy if exists project_join_requests_review_owner on public.project_join_requests;
+create policy project_join_requests_review_owner on public.project_join_requests for update to authenticated
+using (exists(select 1 from public.student_projects p where p.id=project_id and p.created_by=(select auth.uid())))
+with check (exists(select 1 from public.student_projects p where p.id=project_id and p.created_by=(select auth.uid())));
 
 revoke all on public.student_projects, public.project_tasks, public.project_join_requests from anon, authenticated;
 grant select on public.student_projects, public.project_tasks, public.project_join_requests to authenticated;
