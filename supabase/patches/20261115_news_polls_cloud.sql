@@ -69,7 +69,7 @@ revoke all on function public.cast_poll_vote(uuid,uuid) from public,anon;
 grant execute on function public.cast_poll_vote(uuid,uuid) to authenticated;
 
 create or replace function public.create_community_poll(p_title text,p_description text,p_options text[],p_closes_at timestamptz default null)
-returns uuid language plpgsql security definer set search_path=public,pg_temp as $
+returns uuid language plpgsql security definer set search_path=public,pg_temp as $poll$
 declare v_poll uuid; v_option text; v_order integer:=0;
 begin
  if not public.is_verification_representative() then raise exception 'Недостаточно прав'; end if;
@@ -85,7 +85,7 @@ begin
  end loop;
  update public.community_polls set is_open=true where id=v_poll;
  return v_poll;
-end $;
+end $poll$;
 revoke all on function public.create_community_poll(text,text,text[],timestamptz) from public,anon;
 grant execute on function public.create_community_poll(text,text,text[],timestamptz) to authenticated;
 
