@@ -65,6 +65,14 @@ check(election.includes('revoke all on function public.cast_election_vote(uuid,u
   'Anonymous/public execution of the vote RPC must be revoked.');
 check(election.includes('grant execute on function public.cast_election_vote(uuid,uuid) to authenticated;'),
   'Authenticated vote RPC grant is missing.');
+check(election.includes('list_election_candidate_applications(uuid)') && election.includes('list_election_objections(uuid)'),
+  'Restricted election moderation queue RPCs are missing.');
+check(election.includes('returns table(candidate_id uuid,display_name text,program text,submitted_at timestamptz)'),
+  'Candidate review queue must not return voter/account IDs.');
+check(election.includes('returns table(objection_id uuid,category text,description text,status text,created_at timestamptz)'),
+  'Objection review queue must not return submitter IDs.');
+check(cloud.includes('async function listElectionCandidateApplications(') && cloud.includes('async function listElectionObjections('),
+  'Cloud client moderation queue methods are missing.');
 check(election.includes("stage in ('objections','certified')"),
   'Election results must not be visible before the objection stage.');
 check(!election.includes('insert into public.election_voter_receipts(election_id,user_id,ballot_id)'),
