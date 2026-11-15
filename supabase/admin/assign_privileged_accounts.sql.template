@@ -1,0 +1,91 @@
+-- PRIVATE OWNER PROCEDURE — do not put real UUIDs in Git.
+-- Run only by the adult project owner in Supabase Dashboard > SQL Editor.
+-- First let each person create/confirm their own account and sign in once, so profiles exists.
+-- Replace every UUID placeholder below before execution.
+--
+-- Nesterov and each additional administrator are listed explicitly below.
+-- A display name is not an identity. Use the exact auth.users.id copied from
+-- Authentication > Users after checking the account's verified email.
+--
+-- The only elevated role granted here is verification_representative.
+-- The ordinary signup flow does not expose this role or allow users to request it.
+
+do $assign_privileged_accounts$
+declare
+  v_operator_id uuid := 'REPLACE_WITH_ADULT_OPERATOR_AUTH_USER_UUID';
+  v_targets uuid[] := array[
+    'REPLACE_WITH_NESTEROV_AUTH_USER_UUID',
+    'REPLACE_WITH_ADMIN_1_AUTH_USER_UUID',
+    'REPLACE_WITH_ADMIN_2_AUTH_USER_UUID'
+  ]::uuid[];
+  v_target uuid;
+begin
+  if not exists (select 1 from auth.users u where u.id = v_operator_id) then
+    raise exception 'operator_auth_user_not_found';
+  end if;
+
+  foreach v_target in array v_targets loop
+    if v_target = v_operator_id then
+      raise exception 'operator_cannot_self_assign_privileged_role';
+    end if;
+
+    if not exists (
+      select 1 from auth.users u
+      where u.id = v_target
+        and u.email_confirmed_at is not null
+    ) then
+      raise exception 'target_user_missing_or_email_not_confirmed:%', v_target;
+    end if;
+
+    if not exists (
+      select 1 from public.profiles p where p.id = v_target
+    ) then
+      raise exception 'target_profile_missing_sign_in_once_first:%', v_target;
+    end if;
+
+    if not exists (
+      select 1 from public.role_assignments a
+      where a.user_id = v_target
+        and a.role_key = 'verification_representative'
+        and a.valid_from <= current_date
+        and a.valid_until >= current_date
+    ) then
+      insert into public.role_assignments(
+        user_id, role_key, school_id, district_key,
+        organization_name, term_label, valid_from, valid_until,
+        verified_by, request_id
+      ) values (
+        v_target, 'verification_representative', null, null,
+        'Ынтымак — внутреннее управление платформой',
+        'Временный доступ администратора · 180 дней',
+        current_date, current_date + 180,
+        v_operator_id, null
+      );
+    end if;
+  end loop;
+end;
+$assign_privileged_accounts$;
+
+-- Verify assignments without exposing unrelated account data:
+select
+  a.user_id,
+  a.role_key,
+  a.valid_from,
+  a.valid_until,
+  a.verified_by,
+  a.created_at
+from public.role_assignments a
+where a.role_key = 'verification_representative'
+  and a.user_id = any(array[
+    'REPLACE_WITH_NESTEROV_AUTH_USER_UUID',
+    'REPLACE_WITH_ADMIN_1_AUTH_USER_UUID',
+    'REPLACE_WITH_ADMIN_2_AUTH_USER_UUID'
+  ]::uuid[])
+order by a.created_at desc;
+
+-- To revoke access later, replace the target UUID and run this separately:
+-- update public.role_assignments
+-- set valid_until = current_date - 1
+-- where user_id = 'REPLACE_WITH_TARGET_AUTH_USER_UUID'
+--   and role_key = 'verification_representative'
+--   and valid_until >= current_date;
