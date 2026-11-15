@@ -28,7 +28,7 @@ for (const path of ['app.js', 'cloud.js', 'supabase-config.js']) {
 const config = read('supabase-config.js');
 check(/supabasePublishableKey:\s*"sb_publishable_[^"]+"/.test(config),
   'A Supabase publishable key must be configured for the connected project.');
-const browserKeyValues = [...config.matchAll(/(?:supabasePublishableKey|supabaseAnonKey|serviceRoleKey|secretKey)\\s*:\\s*[\"']([^\"']*)[\"']/gi)].map(match => match[1]);
+const browserKeyValues = [...config.matchAll(/(?:supabasePublishableKey|supabaseAnonKey|serviceRoleKey|secretKey)\s*:\s*["']([^"']*)["']/gi)].map(match => match[1]);
 check(!browserKeyValues.some(value => /service_role|sb_secret|^sk-[A-Za-z0-9]/i.test(value)),
   'Server-side or secret API keys must never appear in browser configuration.');
 check(config.includes('enableHostedAI: false'), 'Hosted AI must remain disabled by default.');
