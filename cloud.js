@@ -112,7 +112,7 @@
     if (cleanTitle.length < 5 || cleanTitle.length > 120 || cleanDescription.length < 20 || cleanDescription.length > 1200) {
       throw new Error('Проверь длину названия и описания предложения.');
     }
-    if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:\\+?996|0)\s?\\d{3}[\s-]?\\d{3}[\s-]?\\d{3}|\b\\d{10,}\b/i.test(cleanTitle + ' ' + cleanDescription)) {
+    if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:\+?996|0)\s?\d{3}[\s-]?\d{3}[\s-]?\d{3}|\b\d{10,}\b/i.test(cleanTitle + ' ' + cleanDescription)) {
       throw new Error('Не добавляй контактные и личные данные в предложение.');
     }
     if (scope === 'district' && !['lenin','pervomai','oktyabr','sverdlov'].includes(district)) {
