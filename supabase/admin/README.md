@@ -33,7 +33,7 @@ Secret Key Turnstile хранится только в Supabase Dashboard. В Git
 
 **Ограничение встроенной почты:** hosted Supabase по умолчанию отправляет письма только адресам участников организации и имеет низкий общий лимит; для внешних школьных адресов взрослому владельцу следует настроить custom SMTP и проверить доставку. См. [общие настройки Auth](https://supabase.com/docs/guides/auth/general-configuration), [тестовые Auth-потоки](https://supabase.com/docs/guides/auth/testing-auth-flows), [SMTP](https://supabase.com/docs/guides/auth/auth-smtp), [CAPTCHA](https://supabase.com/docs/guides/auth/auth-captcha).
 
-В режиме приглашений Supabase Dashboard → Authentication → Users → Add user → Send invitation создаёт обычную учётную запись. После первого входа платформа создаёт профиль тестировщика. CAPTCHA можно включить и для приглашённых логинов; в таком случае должны быть настроены и флаги CAPTCHA, и Turnstile Site Key.
+После подключения отдельного staging в режиме приглашений Supabase Dashboard → Authentication → Users → Add user → Send invitation создаёт обычную учётную запись. После первого входа платформа создаёт профиль тестировщика. CAPTCHA можно включить и для приглашённых логинов; в таком случае должны быть настроены и флаги CAPTCHA, и Turnstile Site Key.
  
 ## Нестеров и другие администраторы
 
