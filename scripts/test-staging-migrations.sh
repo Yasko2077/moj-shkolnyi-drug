@@ -26,6 +26,7 @@ SQL_FILES=(
   supabase/patches/20261115_news_polls_cloud.sql
   supabase/patches/20261115_poll_option_write_lock.sql
   supabase/patches/20261115_profile_school_integrity.sql
+  supabase/patches/20261115_tester_onboarding.sql
   supabase/patches/20261115_ai_quota.sql
   supabase/patches/20261115_trusted_school_assignment.sql
   supabase/patches/20261115_elections_foundation.sql
@@ -44,4 +45,5 @@ psql -v ON_ERROR_STOP=1 -f supabase/tests/verify_security_grants.sql
 psql -v ON_ERROR_STOP=1 -f supabase/tests/smoke_event_security.psql
 psql -v ON_ERROR_STOP=1 -f supabase/tests/smoke_project_membership.psql
 psql -v ON_ERROR_STOP=1 -f supabase/tests/smoke_poll_privacy.psql
-echo "Fresh PostgreSQL 17 bootstrap, ordered migrations, ACL checks, and event, project membership, and poll privacy scenarios passed."
+psql -v ON_ERROR_STOP=1 -f supabase/tests/smoke_tester_onboarding.psql
+echo "Fresh PostgreSQL 17 bootstrap, ordered migrations, ACL checks, and event, project membership, poll privacy, and tester onboarding scenarios passed."
