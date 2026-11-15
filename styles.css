@@ -81,3 +81,24 @@ input:focus,select:focus,textarea:focus{outline:3px solid rgba(54,111,232,.15);b
  .stat-card{min-height:75px}
  .top-actions .btn{max-width:118px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 }
+
+
+/* 0.9.4 — personal workspace, favorites and task-flow UX */
+.icon-action{width:34px;height:34px;display:inline-grid;place-items:center;border:1px solid #d8e3f5;border-radius:11px;background:#fff;color:#6680b3;font-size:20px;line-height:1;transition:.18s ease}
+.icon-action:hover{border-color:#8eacef;background:#f4f7ff;transform:translateY(-1px)}
+.icon-action.is-saved{color:#b48635;background:#fff8e9;border-color:#f0dfbd}
+.workspace-welcome{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:25px 28px;margin-bottom:18px;border-radius:22px;color:#fff;background:linear-gradient(115deg,#0b1d42,#173e86 65%,#2b68df);box-shadow:0 18px 45px rgba(18,54,130,.16)}
+.workspace-welcome h2{font:800 27px Manrope,sans-serif;letter-spacing:-.05em;margin:9px 0 6px}
+.workspace-welcome p{max-width:650px;color:#d4e1fb;font-size:11px;line-height:1.65;margin:0}
+.workspace-progress{min-width:170px;display:grid;gap:6px;padding:14px 16px;border:1px solid rgba(255,255,255,.18);border-radius:15px;background:rgba(255,255,255,.08)}
+.workspace-progress strong{font:800 26px Manrope}.workspace-progress span{font-size:10px;color:#d4e1fb}
+.workspace-progress .bar{background:rgba(255,255,255,.18)}.workspace-progress .bar span{background:#8fe0c5}
+.workspace-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.8fr);gap:18px}
+.task-progress{display:grid;gap:8px;margin:14px 0}
+.task-line{display:flex;align-items:flex-start;gap:11px;padding:12px 10px;border:1px solid #e2e9f5;border-radius:12px;margin-top:8px;background:#fbfcff;cursor:pointer}
+.task-line input{width:17px;height:17px;margin:1px 0 0;accent-color:#285bd9;flex:none}
+.task-line span{display:grid;gap:4px}.task-line strong{font-size:11px;color:#20345f}.task-line small{font-size:9px;color:#7a8ba9}
+.task-line.task-done{background:#f0f7f3;border-color:#d7eadf}.task-line.task-done strong{text-decoration:line-through;color:#789087}
+.task-line:hover{border-color:#b8c9ed}
+.workspace-grid .card{min-width:0}
+@media(max-width:760px){.workspace-welcome{align-items:stretch;flex-direction:column;padding:21px}.workspace-progress{min-width:0}.workspace-grid{grid-template-columns:1fr}.icon-action{width:32px;height:32px}}
