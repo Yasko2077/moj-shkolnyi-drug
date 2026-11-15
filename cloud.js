@@ -115,6 +115,9 @@
     if (/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}|(?:\\+?996|0)\\s?\\d{3}[\\s-]?\\d{3}[\\s-]?\\d{3}|\\b\\d{10,}\\b/i.test(cleanTitle + ' ' + cleanDescription)) {
       throw new Error('Не добавляй контактные и личные данные в предложение.');
     }
+    if (scope === 'district' && !['lenin','pervomai','oktyabr','sverdlov'].includes(district)) {
+      throw new Error('Для районного предложения выбери один из четырёх районов.');
+    }
     const { data: profile } = await c.from('profiles').select('school_id').eq('id', session.user.id).maybeSingle();
     const row = {
       created_by: session.user.id,
