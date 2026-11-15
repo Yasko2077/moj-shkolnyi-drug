@@ -26,8 +26,10 @@ for (const path of ['app.js', 'cloud.js', 'supabase-config.js']) {
 }
 
 const config = read('supabase-config.js');
-check(config.includes('supabasePublishableKey: ""'),
-  'The public Supabase key must remain blank in the repository.');
+check(/supabasePublishableKey:\s*"sb_publishable_[^"]+"/.test(config),
+  'A Supabase publishable key must be configured for the connected project.');
+check(!/service_role|sb_secret|sk-[A-Za-z0-9]/i.test(config),
+  'Server-side or secret API keys must never appear in browser configuration.');
 check(config.includes('enableHostedAI: false'), 'Hosted AI must remain disabled by default.');
 for (const flag of [
   'enableCloudInitiatives',
