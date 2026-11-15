@@ -238,6 +238,12 @@
     }
     return polls;
   }
+  async function createPoll({title,description,options,closesAt=null}) {
+    const c=getClient(); if(!c||!session||!isAdmin) throw new Error('Создание опроса доступно только проверяющему.');
+    const cleanOptions=Array.isArray(options)?options.map(x=>String(x).trim()).filter(Boolean):[];
+    const {data,error}=await c.rpc('create_community_poll',{p_title:String(title||'').trim(),p_description:String(description||'').trim(),p_options:cleanOptions,p_closes_at:closesAt||null});
+    if(error) throw error; return data;
+  }
   async function castPollVote(pollId,optionId) {
     const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт.');
     const {error}=await c.rpc('cast_poll_vote',{p_poll_id:pollId,p_option_id:optionId});
@@ -254,7 +260,7 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listEvents, createEvent, registerForEvent, listMyRegistrations, listNews, createNews, listPolls, castPollVote, askHostedAI,
+    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listEvents, createEvent, registerForEvent, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
     initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
