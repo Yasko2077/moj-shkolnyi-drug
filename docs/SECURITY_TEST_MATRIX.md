@@ -87,27 +87,33 @@
 43. В демо-форме нельзя подать кандидатуру, пока не отмечены оба отдельных согласия на публикацию имени и программы.
 44. Индексный патч добавляет семь заранее проверенных индексов для baseline foreign keys и не создаёт дубликатов существующих индексов.
 45. Подтверждённый представитель может создать городское мероприятие и прочитать список только собственного события; для чужих событий нужно отдельное территориальное полномочие.
+46. Облачная регистрация отклоняется без отдельного согласия на доступ организатора к данным именно этого события.
+47. Имя участника берётся из профиля, школа — только из активного справочника школ, класс — из профиля; подмена этих значений параметрами клиента невозможна.
+48. Список участников возвращает только записи с organizer_access_consent=true.
+49. Районное мероприятие недоступно пользователю без подтверждённой школы в том же районе; городское мероприятие доступно с профилем без школьной привязки.
+50. Повторная регистрация после статуса cancelled обновляет существующую запись, не создавая дубликат.
 ## Порядок применения SQL-патчей
 
 Для тестовой среды, после проверки исходной схемы и резервной копии:
 
 1. `20261115_events_cloud.sql`
 2. `20261115_event_creator_scope.sql`
-3. `20261115_event_roster_scope.sql`
-4. `20261115_event_registration_hardening.sql`
-5. `20261115_event_registration_counts.sql`
-6. `20261115_project_lab.sql`
-7. `20261115_project_join_review.sql`
-8. `20261115_project_membership.sql`
-9. `20261115_initiatives_cloud.sql`
-10. `20261115_initiative_school_scope.sql`
-11. `20261115_news_polls_cloud.sql`
-12. `20261115_poll_option_write_lock.sql`
-13. `20261115_profile_school_integrity.sql`
-14. `20261115_ai_quota.sql`
-15. `20261115_trusted_school_assignment.sql`
-16. `20261115_elections_foundation.sql`
-17. `20261115_fk_indexes.sql`
+3. `20261115_event_registration_hardening.sql`
+4. `20261115_event_registration_consent.sql`
+5. `20261115_event_roster_scope.sql`
+6. `20261115_event_registration_counts.sql`
+7. `20261115_project_lab.sql`
+8. `20261115_project_join_review.sql`
+9. `20261115_project_membership.sql`
+10. `20261115_initiatives_cloud.sql`
+11. `20261115_initiative_school_scope.sql`
+12. `20261115_news_polls_cloud.sql`
+13. `20261115_poll_option_write_lock.sql`
+14. `20261115_profile_school_integrity.sql`
+15. `20261115_ai_quota.sql`
+16. `20261115_trusted_school_assignment.sql`
+17. `20261115_elections_foundation.sql`
+18. `20261115_fk_indexes.sql`
 
 Порядок нужно сверить с фактической схемой тестовой базы. Не запускать повторно вслепую и не применять в production без одобрения взрослого владельца и независимой проверки.
 
