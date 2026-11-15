@@ -116,7 +116,7 @@
       schoolName,
       districtKey,
       gradeLabel:data.grade_label||'',
-      accountType:'tester'
+      accountType:data.account_type||'tester'
     };
   }
 
