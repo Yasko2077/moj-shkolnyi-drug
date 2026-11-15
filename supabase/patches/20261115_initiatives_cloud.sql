@@ -19,7 +19,7 @@ create table if not exists public.initiatives (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint initiatives_scope_location_check check (
-    (scope = 'school' and school_id is not null)
+    (scope = 'school' and (school_id is not null or target_label is not null))
     or (scope = 'district' and district_key is not null)
     or (scope = 'city')
   )
