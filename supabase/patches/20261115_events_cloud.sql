@@ -1,4 +1,7 @@
 -- Additive event calendar and safe registration RPCs. Apply only after adult-owner approval.
+-- event_key identifies a category, not an event; multiple events may use the same category.
+alter table public.events drop constraint if exists events_event_key_key;
+
 alter table public.events
   add column if not exists description text not null default '',
   add column if not exists event_date date,
