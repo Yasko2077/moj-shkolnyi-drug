@@ -19,7 +19,7 @@ The build uses an explicit allow-list. Only the browser app shell and public bro
 
 - Keep Supabase cloud feature flags off until the matching migrations have been applied to a separate Supabase staging project and the RLS tests have passed there.
 - An adult owner must configure Auth email confirmation, the exact Render preview URL in Site URL / Redirect URLs, and custom SMTP. Supabase's built-in mailer is not suitable for sending account confirmation and password recovery to an unrestricted set of external school addresses.
-- CAPTCHA must be integrated and verified before opening self-service sign-up broadly. Do not disable email confirmation as a workaround.
+- The site defaults to invite-only sign-in. Self-service sign-up stays hidden until an adult owner configures Cloudflare Turnstile in Supabase Auth, places the public Site Key in `supabase-config.js`, sets `enableAuthCaptcha: true`, validates signup/sign-in/password reset, and only then sets `enableSelfServiceSignup: true`. The Turnstile Secret Key belongs only in Supabase Dashboard. Do not disable email confirmation as a workaround.
 - Use synthetic data only. Do not enter real student details or sensitive safeguarding reports.
 - Nesterov and other administrators are invited to create ordinary tester accounts first. The adult owner then grants separate, time-limited `verification_representative` assignments in Supabase SQL Editor using `supabase/admin/assign_privileged_accounts.sql.template`. Never put their real UUIDs or emails in Git.
 
