@@ -27,16 +27,18 @@ if (/suutpjjcendapzpebkcp|sb_publishable_|sb_secret_|service_role/i.test(publicC
   throw new Error("The public preview config must not inherit the repository's live Supabase project or credentials.");
 }
 for (const flag of [
-  "enableHostedAI: false",
-  "enableCloudInitiatives: false",
-  "enableCloudProjects: false",
-  "enableCloudEvents: false",
-  "enableCloudContent: false",
-  "enableCloudElections: false",
-  "enableAuthCaptcha: false",
-  "enableSelfServiceSignup: false"
+  "enableHostedAI",
+  "enableCloudInitiatives",
+  "enableCloudProjects",
+  "enableCloudEvents",
+  "enableCloudContent",
+  "enableCloudElections",
+  "enableAuthCaptcha",
+  "enableSelfServiceSignup"
 ]) {
-  if (!publicConfig.includes(flag)) throw new Error(`Safe preview default is missing: ${flag}`);
+  if (!new RegExp('"'+flag+'"\\\\s*:\\\\s*false').test(publicConfig)) {
+    throw new Error(`Safe preview default is missing or enabled: ${flag}`);
+  }
 }
 
 console.log(`Static publish directory verified (${files.size} approved files; no private docs, SQL, admin files, or live Supabase connection).`);
