@@ -91,15 +91,13 @@
     let {data,error}=await c.from('profiles')
       .select('display_name,preferred_language,school_id,grade_label,account_type')
       .eq('id',session.user.id).maybeSingle();
-    // Keep sign-in compatible with the existing live schema until the tester migration
-    // is applied: the secure default remains "tester", never an elevated role.
-    if(error && /account_type|schema cache|column .* does not exist/i.test(error.message||'')){
-      const fallback=await c.from('profiles')
+
+    // Backward compatibility while tester_onboarding is not deployed to this database.
+    // Missing account_type never grants any privilege; it defaults to the unprivileged tester state.
+    if(error && /account_type|column .* does not exist|42703/i.test([error.message,error.details,error.code].filter(Boolean).join(' '))) {
+      ({data,error}=await c.from('profiles')
         .select('display_name,preferred_language,school_id,grade_label')
-        .eq('id',session.user.id).maybeSingle();
-      data=fallback.data;
-      error=fallback.error;
-      if(data) data.account_type='tester';
+        .eq('id',session.user.id).maybeSingle());
     }
     if(error) throw error;
     if(!data) return null;
@@ -118,10 +116,11 @@
       schoolName,
       districtKey,
       gradeLabel:data.grade_label||'',
-      accountType:data.account_type||'tester'
+      accountType:'tester'
     };
   }
-  async function updateMyProfile({displayName,gradeLabel,language='ru'}) {
+
+    async function updateMyProfile({displayName,gradeLabel,language='ru'}) {
     const c=getClient();
     if(!c||!session?.user) throw new Error('Войди в аккаунт.');
     const cleanName=String(displayName||'').trim();
