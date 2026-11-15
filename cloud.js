@@ -118,7 +118,9 @@
       grade_label:cleanGrade||null
     }).eq('id',session.user.id);
     if(error) throw error;
-    return await getMyProfile();
+    const saved=await getMyProfile();
+    if(!saved) throw new Error('Профиль не найден. Повтори вход или обратись к проверяющему представителю.');
+    return saved;
   }
   async function listActiveSchools() {
     const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт.');
