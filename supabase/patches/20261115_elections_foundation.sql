@@ -124,7 +124,7 @@ create or replace function public.create_election(
  p_school_id uuid,p_district_key text,p_rules_text text,
  p_nominations_open_at timestamptz,p_nominations_close_at timestamptz,
  p_campaign_close_at timestamptz,p_voting_open_at timestamptz,p_voting_close_at timestamptz
-) returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
+) returns uuid language plpgsql security definer set search_path=public,pg_temp as $function$
 declare v_id uuid;
 begin
  if auth.uid() is null or not public.is_verification_representative() then raise exception 'election_create_forbidden'; end if;
@@ -143,10 +143,10 @@ begin
  returning id into v_id;
  insert into public.election_audit_log(election_id,actor_id,action) values(v_id,auth.uid(),'created');
  return v_id;
-end $$;
+end $function$;
 
 create or replace function public.set_election_eligibility(p_election_id uuid,p_user_ids uuid[])
-returns integer language plpgsql security definer set search_path=public,pg_temp as $$
+returns integer language plpgsql security definer set search_path=public,pg_temp as $function$
 declare v_stage text; v_scope text; v_school uuid; v_district text; v_count integer;
 begin
  if auth.uid() is null or not public.is_verification_representative() then raise exception 'eligibility_manage_forbidden'; end if;
@@ -173,7 +173,7 @@ begin
  insert into public.election_audit_log(election_id,actor_id,action,details)
  values(p_election_id,auth.uid(),'eligibility_replaced',jsonb_build_object('count',v_count));
  return v_count;
-end $$;
+end $function$;
 
 create or replace function public.submit_election_candidate(p_election_id uuid,p_program text)
 returns uuid language plpgsql security definer set search_path=public,pg_temp as $
@@ -190,10 +190,10 @@ begin
  values(p_election_id,auth.uid(),v_display_name,trim(p_program)) returning id into v_id;
  insert into public.election_audit_log(election_id,actor_id,action) values(p_election_id,auth.uid(),'candidate_submitted');
  return v_id;
-end $$;
+end $function$;
 
 create or replace function public.review_election_candidate(p_candidate_id uuid,p_decision text,p_note text default null)
-returns void language plpgsql security definer set search_path=public,pg_temp as $$
+returns void language plpgsql security definer set search_path=public,pg_temp as $function$
 declare v_election uuid;
 begin
  if auth.uid() is null or not public.is_verification_representative() then raise exception 'candidate_review_forbidden'; end if;
@@ -203,10 +203,10 @@ begin
  update public.election_candidates set status=p_decision,reviewed_by=auth.uid(),reviewed_at=now(),reviewer_note=left(coalesce(p_note,''),500) where id=p_candidate_id;
  insert into public.election_audit_log(election_id,actor_id,action,details)
  values(v_election,auth.uid(),'candidate_reviewed',jsonb_build_object('candidate_id',p_candidate_id,'decision',p_decision));
-end $$;
+end $function$;
 
 create or replace function public.advance_election_stage(p_election_id uuid,p_next_stage text,p_reason text)
-returns void language plpgsql security definer set search_path=public,pg_temp as $$
+returns void language plpgsql security definer set search_path=public,pg_temp as $function$
 declare v_old text;
 begin
  if auth.uid() is null or not public.is_verification_representative() then raise exception 'stage_change_forbidden'; end if;
@@ -230,10 +230,10 @@ begin
  update public.elections set stage=p_next_stage,updated_at=now() where id=p_election_id;
  insert into public.election_audit_log(election_id,actor_id,action,details)
  values(p_election_id,auth.uid(),'stage_changed',jsonb_build_object('from',v_old,'to',p_next_stage,'reason',trim(p_reason)));
-end $$;
+end $function$;
 
 create or replace function public.cast_election_vote(p_election_id uuid,p_candidate_id uuid)
-returns void language plpgsql security definer set search_path=public,pg_temp as $$
+returns void language plpgsql security definer set search_path=public,pg_temp as $function$
 declare v_ballot uuid:=gen_random_uuid(); v_e public.elections%rowtype;
 begin
  if auth.uid() is null then raise exception 'not_authenticated'; end if;
@@ -243,11 +243,11 @@ begin
  if not exists(select 1 from public.election_candidates where id=p_candidate_id and election_id=p_election_id and status='approved') then raise exception 'candidate_not_approved'; end if;
  insert into public.election_voter_receipts(election_id,user_id,ballot_id) values(p_election_id,auth.uid(),v_ballot);
  insert into public.election_ballots(ballot_id,election_id,candidate_id) values(v_ballot,p_election_id,p_candidate_id);
-end $$;
+end $function$;
 
 create or replace function public.get_election_results(p_election_id uuid)
 returns table(candidate_id uuid,display_name text,vote_count bigint)
-language plpgsql stable security definer set search_path=public,pg_temp as $$
+language plpgsql stable security definer set search_path=public,pg_temp as $function$
 begin
  if not exists(select 1 from public.elections where id=p_election_id and stage in ('counting','objections','certified')) then raise exception 'results_not_available'; end if;
  return query select c.id,c.display_name,count(b.ballot_id)
@@ -255,10 +255,10 @@ begin
  left join public.election_ballots b on b.candidate_id=c.id and b.election_id=p_election_id
  where c.election_id=p_election_id and c.status='approved'
  group by c.id,c.display_name order by count(b.ballot_id) desc,c.display_name;
-end $$;
+end $function$;
 
 create or replace function public.submit_election_objection(p_election_id uuid,p_category text,p_description text)
-returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
+returns uuid language plpgsql security definer set search_path=public,pg_temp as $function$
 declare v_id uuid; v_stage text;
 begin
  if auth.uid() is null then raise exception 'not_authenticated'; end if;
@@ -269,7 +269,7 @@ begin
  values(p_election_id,p_category,trim(p_description)) returning id into v_id;
  insert into public.election_audit_log(election_id,actor_id,action) values(p_election_id,auth.uid(),'objection_submitted');
  return v_id;
-end $$;
+end $function$;
 
 create or replace function public.review_election_objection(p_objection_id uuid,p_decision text,p_resolution text)
 returns void language plpgsql security definer set search_path=public,pg_temp as $
@@ -283,22 +283,22 @@ begin
  where id=p_objection_id;
  insert into public.election_audit_log(election_id,actor_id,action,details)
  values(v_election,auth.uid(),'objection_reviewed',jsonb_build_object('objection_id',p_objection_id,'decision',p_decision));
- end $$;
+ end $function$;
 
 create or replace function public.get_my_election_receipt(p_election_id uuid)
-returns boolean language sql stable security definer set search_path=public,pg_temp as $$
+returns boolean language sql stable security definer set search_path=public,pg_temp as $function$
  select exists(select 1 from public.election_voter_receipts where election_id=p_election_id and user_id=auth.uid())
-$$;
+$function$;
 
 create or replace function public.get_election_public_candidates(p_election_id uuid)
 returns table(id uuid,display_name text,program text,status text)
-language sql stable security definer set search_path=public,pg_temp as $$
+language sql stable security definer set search_path=public,pg_temp as $function$
  select c.id,c.display_name,c.program,c.status from public.election_candidates c
  join public.elections e on e.id=c.election_id
  where c.election_id=p_election_id and c.status='approved'
  and e.stage in ('nominations','review','campaign','voting','counting','objections','certified')
  order by c.submitted_at
-$$;
+$function$;
 
 revoke all on function public.create_election(text,text,text,text,uuid,text,text,timestamptz,timestamptz,timestamptz,timestamptz,timestamptz) from public,anon;
 revoke all on function public.set_election_eligibility(uuid,uuid[]) from public,anon;
