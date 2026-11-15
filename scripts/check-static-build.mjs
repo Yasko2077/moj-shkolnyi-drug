@@ -1,4 +1,4 @@
-import { readdir, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 const output = path.resolve("dist");
@@ -22,4 +22,21 @@ for (const forbidden of ["README.md", "docs", "supabase", "ADMIN_SETUP.txt", "AI
   if (files.has(forbidden)) throw new Error(`Private project material leaked into dist/: ${forbidden}`);
 }
 
-console.log(`Static publish directory verified (${files.size} approved files; no internal SQL/docs/admin files).`);
+const publicConfig = await readFile(path.join(output, "supabase-config.js"), "utf8");
+if (/suutpjjcendapzpebkcp|sb_publishable_|sb_secret_|service_role/i.test(publicConfig)) {
+  throw new Error("The public preview config must not inherit the repository's live Supabase project or credentials.");
+}
+for (const flag of [
+  "enableHostedAI: false",
+  "enableCloudInitiatives: false",
+  "enableCloudProjects: false",
+  "enableCloudEvents: false",
+  "enableCloudContent: false",
+  "enableCloudElections: false",
+  "enableAuthCaptcha: false",
+  "enableSelfServiceSignup: false"
+]) {
+  if (!publicConfig.includes(flag)) throw new Error(`Safe preview default is missing: ${flag}`);
+}
+
+console.log(`Static publish directory verified (${files.size} approved files; no private docs, SQL, admin files, or live Supabase connection).`);
