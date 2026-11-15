@@ -79,6 +79,47 @@
     const { error } = await c.auth.signOut(); if (error) throw error;
     session = null; authUser = null; isAdmin = false;
   }
+  async function getMyProfile() {
+    const c=getClient();
+    if(!c||!session?.user) throw new Error('Войди в аккаунт.');
+    const {data,error}=await c.from('profiles')
+      .select('display_name,preferred_language,school_id,grade_label')
+      .eq('id',session.user.id).maybeSingle();
+    if(error) throw error;
+    if(!data) return null;
+    let schoolName='',districtKey='';
+    if(data.school_id){
+      const {data:school,error:schoolError}=await c.from('schools')
+        .select('name,district_key').eq('id',data.school_id).maybeSingle();
+      if(schoolError) throw schoolError;
+      schoolName=school?.name||'';
+      districtKey=school?.district_key||'';
+    }
+    return {
+      displayName:data.display_name||'',
+      preferredLanguage:data.preferred_language||'ru',
+      schoolId:data.school_id||null,
+      schoolName,
+      districtKey,
+      gradeLabel:data.grade_label||''
+    };
+  }
+  async function updateMyProfile({displayName,gradeLabel,language='ru'}) {
+    const c=getClient();
+    if(!c||!session?.user) throw new Error('Войди в аккаунт.');
+    const cleanName=String(displayName||'').trim();
+    const cleanGrade=String(gradeLabel||'').trim();
+    if(cleanName.length<2||cleanName.length>70||cleanGrade.length>30||!['ru','ky'].includes(language)){
+      throw new Error('Проверь имя, класс и язык профиля.');
+    }
+    const {error}=await c.from('profiles').update({
+      display_name:cleanName,
+      preferred_language:language,
+      grade_label:cleanGrade||null
+    }).eq('id',session.user.id);
+    if(error) throw error;
+    return await getMyProfile();
+  }
   async function listActiveSchools() {
     const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт.');
     const {data,error}=await c.from('schools').select('id,name,district_key').eq('is_active',true).order('name',{ascending:true});
@@ -401,7 +442,7 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, checkAdmin, listActiveSchools, assignProfileSchool, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, getProjectMemberCounts, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, listElections, getElectionCandidates, getMyElectionReceipt, createElection, setElectionEligibility, submitElectionCandidate, reviewElectionCandidate, advanceElectionStage, castElectionVote, getElectionResults, submitElectionObjection, reviewElectionObjection, askHostedAI,
+    ensureProfile, getMyProfile, updateMyProfile, checkAdmin, listActiveSchools, assignProfileSchool, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listProjectJoinRequests, getProjectMemberCounts, reviewProjectJoinRequest, withdrawProjectJoinRequest, listEvents, createEvent, registerForEvent, getEventRoster, listMyRegistrations, listNews, createNews, listPolls, createPoll, castPollVote, listElections, getElectionCandidates, getMyElectionReceipt, createElection, setElectionEligibility, submitElectionCandidate, reviewElectionCandidate, advanceElectionStage, castElectionVote, getElectionResults, submitElectionObjection, reviewElectionObjection, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
     initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
