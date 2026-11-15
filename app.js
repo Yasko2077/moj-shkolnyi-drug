@@ -353,7 +353,7 @@ function disposeTesterCaptcha(){
 }
 function mountTesterCaptcha(){
  const siteKey=String(window.YNTYMAK_CONFIG?.turnstileSiteKey||'').trim();
- const host=document.getElementById('testerTurnstile');
+ const host=document.getElementById('authTurnstile');
  if(!siteKey||!host||!window.turnstile?.render)return;
  disposeTesterCaptcha();
  testerTurnstileWidgetId=window.turnstile.render(host,{
@@ -389,7 +389,7 @@ function loginModal(){
   privacy:'Бул тесттик версия экенин түшүнөм. Башка окуучулардын жеке маалыматтарын, байланыштарын, документтерин же купуя кайрылууларын киргизбейм.',
   login:'Кирүү',signup:'Тест аккаунтун түзүү',forgot:'Сырсөздү унуттуңбу?',cancel:'Жабуу',passwordHint:'кеминде 8 белги',
   inviteOnly:'Өз алдынча катталуу азырынча жабык. Уюштуруучудан жеке чакыруу ал. Чакырууну ырастап, ушул жерден кирсең, система сага «Сыноочу» профилин түзөт.',
-  captcha:'Катталууну ачуу үчүн коопсуздук текшерүүсүн бүтүр.',
+  captcha:'Кирүү, катталуу же сырсөздү калыбына келтирүү үчүн коопсуздук текшерүүсүн бүтүр.',
   admin:'Администратордук укуктар бул жерде тандалбайт. Аларды чоңдорго жооптуу ээси өзүнчө жана жабык тартипте дайындайт.'
  }:{
   title:'Вход и регистрация',
@@ -398,13 +398,14 @@ function loginModal(){
   privacy:'Я понимаю, что это тестовая версия. Я не буду вводить личные данные других учеников, контакты, документы или чувствительные обращения.',
   login:'Войти',signup:'Создать аккаунт тестировщика',forgot:'Забыли пароль?',cancel:'Закрыть',passwordHint:'минимум 8 символов',
   inviteOnly:'Самостоятельная регистрация пока закрыта. Получи персональное приглашение у организатора. После подтверждения приглашения войди здесь — система создаст профиль тестировщика.',
-  captcha:'Пройди проверку безопасности, чтобы создать аккаунт.',
+  captcha:'Пройди проверку безопасности перед входом, регистрацией или восстановлением пароля.',
   admin:'Администраторские права здесь не выбираются. Их отдельно и закрытым способом назначает взрослый ответственный владелец проекта.'
  };
  const configured=Boolean(window.YntymakCloud?.configured());
- const signupEnabled=configured &&
-  window.YNTYMAK_CONFIG?.enableSelfServiceSignup===true &&
+ const authCaptchaEnabled=configured &&
+  window.YNTYMAK_CONFIG?.enableAuthCaptcha===true &&
   Boolean(String(window.YNTYMAK_CONFIG?.turnstileSiteKey||'').trim());
+ const signupEnabled=authCaptchaEnabled && window.YNTYMAK_CONFIG?.enableSelfServiceSignup===true;
  const notice=configured
   ? '<p class="card-sub">'+esc(t.intro)+'</p>'
   : '<div class="notice gold">Supabase ещё не настроен в этой копии. Сейчас доступны только локальные демонстрационные сценарии.</div>';
@@ -421,6 +422,7 @@ function loginModal(){
   : '<div class="notice gold">'+esc(t.inviteOnly)+'</div>';
  const body=notice+`
  <form id="loginForm" class="field-grid" style="margin-top:14px">
+  ${authCaptchaEnabled?'<div class="field full"><div id="authTurnstile" aria-label="'+esc(t.captcha)+'"></div><small>'+esc(t.captcha)+'</small></div>':''}
   <div class="field full"><label>${esc(t.email)}</label><input name="email" type="email" autocomplete="email" required></div>
   <div class="field full"><label>${esc(t.password)}</label><input name="password" type="password" minlength="8" maxlength="72" autocomplete="current-password" required></div>
   <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>${esc(t.cancel)}</button><button class="btn" type="submit" ${configured?'':'disabled'}>${esc(t.login)}</button></div>
@@ -609,7 +611,23 @@ document.addEventListener('submit',async e=>{
   }catch(err){toast(err.message||'Не удалось обновить пароль.');}
   return;
  }
- if(f.id==='loginForm'){e.preventDefault();const d=new FormData(f);try{const result=await window.YntymakCloud.signIn({email:d.get('email').trim(),password:d.get('password')});state.admin=result.isAdmin;state.realAdmin=result.isAdmin;try{await loadCloudProfile();}catch(profileError){console.warn('Cloud profile could not be loaded:',profileError.message);}closeModal();render();toast(result.isAdmin?'Вход выполнен. Подтверждены полномочия администратора.':'Вход выполнен. Добро пожаловать, тестировщик!');}catch(err){toast(err.message||'Не удалось войти.');}}
+ if(f.id==='loginForm'){
+  e.preventDefault();
+  const d=new FormData(f);
+  if(window.YNTYMAK_CONFIG?.enableAuthCaptcha===true&&!testerCaptchaToken){toast('Пройди проверку безопасности перед входом.');return;}
+  try{
+   const result=await window.YntymakCloud.signIn({
+    email:d.get('email').trim(),password:d.get('password'),captchaToken:testerCaptchaToken
+   });
+   disposeTesterCaptcha();
+   state.admin=result.isAdmin;state.realAdmin=result.isAdmin;
+   try{await loadCloudProfile();}catch(profileError){console.warn('Cloud profile could not be loaded:',profileError.message);}
+   closeModal();render();toast(result.isAdmin?'Вход выполнен. Подтверждены полномочия администратора.':'Вход выполнен. Добро пожаловать, тестировщик!');
+  }catch(err){
+   toast(err.message||'Не удалось войти.');
+   if(window.YNTYMAK_CONFIG?.enableAuthCaptcha===true){disposeTesterCaptcha();loadTesterCaptcha().catch(()=>{});}
+  }
+ }
  if(f.id==='signupForm'){
   e.preventDefault();
   const d=new FormData(f);
@@ -641,9 +659,9 @@ document.addEventListener('click',async e=>{
  const email=$('#loginForm input[name="email"]')?.value.trim()||'';
  if(!email){toast('Сначала укажи электронную почту в форме входа.');$('#loginForm input[name="email"]')?.focus();return;}
  try{
-  await window.YntymakCloud.requestPasswordReset(email);
-  toast('Если аккаунт с таким адресом существует, письмо для восстановления отправлено.');
- }catch(err){toast(err.message||'Не удалось отправить письмо восстановления.');}
+  if(window.YNTYMAK_CONFIG?.enableAuthCaptcha===true&&!testerCaptchaToken){toast('Пройди проверку безопасности перед восстановлением пароля.');return;}\n  await window.YntymakCloud.requestPasswordReset(email,testerCaptchaToken);
+  disposeTesterCaptcha();\n  toast('Если аккаунт с таким адресом существует, письмо для восстановления отправлено.');
+ }catch(err){toast(err.message||'Не удалось отправить письмо восстановления.');if(window.YNTYMAK_CONFIG?.enableAuthCaptcha===true){disposeTesterCaptcha();loadTesterCaptcha().catch(()=>{});}}
 });
 window.addEventListener('yntymak:password-recovery',()=>passwordRecoveryModal());
 $('#authButton').addEventListener('click',()=>{if(window.YntymakCloud?.getSession()){go('profile');toast('Аккаунт активен.');}else loginModal();});
