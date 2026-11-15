@@ -175,19 +175,19 @@ begin
  return v_count;
 end $$;
 
-create or replace function public.submit_election_candidate(p_election_id uuid,p_display_name text,p_program text)
-returns uuid language plpgsql security definer set search_path=public,pg_temp as $$
-declare v_id uuid; v_e public.elections%rowtype; v_school uuid;
+create or replace function public.submit_election_candidate(p_election_id uuid,p_program text)
+returns uuid language plpgsql security definer set search_path=public,pg_temp as $
+declare v_id uuid; v_e public.elections%rowtype; v_school uuid; v_display_name text;
 begin
  if auth.uid() is null then raise exception 'not_authenticated'; end if;
  select * into v_e from public.elections where id=p_election_id for update;
  if not found or v_e.stage<>'nominations' or now()<v_e.nominations_open_at or now()>=v_e.nominations_close_at then raise exception 'nominations_closed'; end if;
- select school_id into v_school from public.profiles where id=auth.uid();
+ select school_id,display_name into v_school,v_display_name from public.profiles where id=auth.uid();
  if v_e.scope='school' and v_school is distinct from v_e.school_id then raise exception 'candidate_school_mismatch'; end if;
  if v_e.scope='district' and not exists(select 1 from public.schools s where s.id=v_school and s.district_key=v_e.district_key) then raise exception 'candidate_district_mismatch'; end if;
  if not exists(select 1 from public.election_eligibility where election_id=p_election_id and user_id=auth.uid()) then raise exception 'candidate_not_eligible'; end if;
  insert into public.election_candidates(election_id,user_id,display_name,program)
- values(p_election_id,auth.uid(),trim(p_display_name),trim(p_program)) returning id into v_id;
+ values(p_election_id,auth.uid(),v_display_name,trim(p_program)) returning id into v_id;
  insert into public.election_audit_log(election_id,actor_id,action) values(p_election_id,auth.uid(),'candidate_submitted');
  return v_id;
 end $$;
@@ -223,7 +223,9 @@ begin
  or (v_old in ('draft','nominations','review','campaign','voting') and p_next_stage='cancelled')) then
  raise exception 'invalid_stage_transition';
  end if;
- if p_next_stage='voting' and now()< (select voting_open_at from public.elections where id=p_election_id) then raise exception 'voting_not_started'; end if;
+ if p_next_stage='review' and now()< (select nominations_close_at from public.elections where id=p_election_id) then raise exception 'nominations_not_closed'; end if;
+ if p_next_stage='campaign' and now()< (select nominations_close_at from public.elections where id=p_election_id) then raise exception 'nominations_not_closed'; end if;
+ if p_next_stage='voting' and (now()< (select campaign_close_at from public.elections where id=p_election_id) or now()< (select voting_open_at from public.elections where id=p_election_id)) then raise exception 'voting_not_started'; end if;
  if p_next_stage='counting' and now()< (select voting_close_at from public.elections where id=p_election_id) then raise exception 'voting_not_closed'; end if;
  update public.elections set stage=p_next_stage,updated_at=now() where id=p_election_id;
  insert into public.election_audit_log(election_id,actor_id,action,details)
@@ -269,6 +271,20 @@ begin
  return v_id;
 end $$;
 
+create or replace function public.review_election_objection(p_objection_id uuid,p_decision text,p_resolution text)
+returns void language plpgsql security definer set search_path=public,pg_temp as $
+declare v_election uuid;
+begin
+ if auth.uid() is null or not public.is_verification_representative() then raise exception 'objection_review_forbidden'; end if;
+ if p_decision not in ('resolved','dismissed') or char_length(trim(coalesce(p_resolution,'')))<10 then raise exception 'invalid_objection_resolution'; end if;
+ select election_id into v_election from public.election_objections where id=p_objection_id and status in ('submitted','under_review') for update;
+ if not found then raise exception 'objection_not_pending'; end if;
+ update public.election_objections set status=p_decision,resolution=left(trim(p_resolution),2000),reviewed_by=auth.uid(),reviewed_at=now()
+ where id=p_objection_id;
+ insert into public.election_audit_log(election_id,actor_id,action,details)
+ values(v_election,auth.uid(),'objection_reviewed',jsonb_build_object('objection_id',p_objection_id,'decision',p_decision));
+end $;
+
 create or replace function public.get_my_election_receipt(p_election_id uuid)
 returns boolean language sql stable security definer set search_path=public,pg_temp as $$
  select exists(select 1 from public.election_voter_receipts where election_id=p_election_id and user_id=auth.uid())
@@ -286,22 +302,24 @@ $$;
 
 revoke all on function public.create_election(text,text,text,text,uuid,text,text,timestamptz,timestamptz,timestamptz,timestamptz,timestamptz) from public,anon;
 revoke all on function public.set_election_eligibility(uuid,uuid[]) from public,anon;
-revoke all on function public.submit_election_candidate(uuid,text,text) from public,anon;
+revoke all on function public.submit_election_candidate(uuid,text) from public,anon;
 revoke all on function public.review_election_candidate(uuid,text,text) from public,anon;
 revoke all on function public.advance_election_stage(uuid,text,text) from public,anon;
 revoke all on function public.cast_election_vote(uuid,uuid) from public,anon;
 revoke all on function public.get_election_results(uuid) from public,anon;
 revoke all on function public.submit_election_objection(uuid,text,text) from public,anon;
+revoke all on function public.review_election_objection(uuid,text,text) from public,anon;
 revoke all on function public.get_my_election_receipt(uuid) from public,anon;
 revoke all on function public.get_election_public_candidates(uuid) from public,anon;
 grant execute on function public.create_election(text,text,text,text,uuid,text,text,timestamptz,timestamptz,timestamptz,timestamptz,timestamptz) to authenticated;
 grant execute on function public.set_election_eligibility(uuid,uuid[]) to authenticated;
-grant execute on function public.submit_election_candidate(uuid,text,text) to authenticated;
+grant execute on function public.submit_election_candidate(uuid,text) to authenticated;
 grant execute on function public.review_election_candidate(uuid,text,text) to authenticated;
 grant execute on function public.advance_election_stage(uuid,text,text) to authenticated;
 grant execute on function public.cast_election_vote(uuid,uuid) to authenticated;
 grant execute on function public.get_election_results(uuid) to authenticated;
 grant execute on function public.submit_election_objection(uuid,text,text) to authenticated;
+grant execute on function public.review_election_objection(uuid,text,text) to authenticated;
 grant execute on function public.get_my_election_receipt(uuid) to authenticated;
 grant execute on function public.get_election_public_candidates(uuid) to authenticated;
 
