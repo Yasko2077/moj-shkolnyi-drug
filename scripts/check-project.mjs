@@ -231,6 +231,30 @@ check(cloud.includes("c.rpc('publish_news_post'") &&
   !cloud.includes("c.from('news_posts').update("),
   'Cloud news client must publish only through the atomic publish_news_post RPC.');
 
+// Explicitly revoke historical column-level grants, not only table privileges
+const eventHardening = read('supabase/patches/20261115_event_registration_hardening.sql');
+check(eventHardening.includes('revoke insert (') &&
+  eventHardening.includes('event_id,user_id,participant_name,school_label,grade_label,') &&
+  eventHardening.includes('on public.event_registrations from anon, authenticated;'),
+  'Event registration must revoke the historical column-level INSERT grants.');
+check(eventHardening.includes('revoke all on function public.get_event_roster(text) from public, anon, authenticated;'),
+  'Legacy unscoped event roster RPC must be inaccessible before the scoped replacement is installed.');
+
+const profileIntegrity = read('supabase/patches/20261115_profile_school_integrity.sql');
+check(profileIntegrity.includes('revoke update (id,display_name,preferred_language,school_id,grade_label,created_at,updated_at)') &&
+  profileIntegrity.includes('grant update(display_name, preferred_language, grade_label)'),
+  'Profile migration must clear prior column UPDATE grants before applying the safe allow-list.');
+
+const pollLock = read('supabase/patches/20261115_poll_option_write_lock.sql');
+check(pollLock.includes('revoke insert (poll_id,label,sort_order)') &&
+  pollLock.includes('revoke update (poll_id,label,sort_order)'),
+  'Poll option migration must revoke prior column-level writes.');
+
+const newsAtomic = read('supabase/patches/20261116_news_publish_atomic.sql');
+check(newsAtomic.includes('revoke insert (created_by,title,body,category,is_published)') &&
+  newsAtomic.includes('revoke update (title,body,category,is_published)'),
+  'Atomic news migration must revoke prior column-level writes.');
+
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');
 check(matrix.includes('20261115_elections_foundation.sql'),
   'Security matrix must include the elections migration.');
