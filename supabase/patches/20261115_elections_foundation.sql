@@ -147,11 +147,17 @@ returns integer language plpgsql security definer set search_path=public,pg_temp
 declare v_stage text; v_scope text; v_school uuid; v_district text; v_count integer;
 begin
  if auth.uid() is null or not public.is_verification_representative() then raise exception 'eligibility_manage_forbidden'; end if;
- if coalesce(array_length(p_user_ids,1),0)>5000 then raise exception 'eligibility_batch_too_large'; end if;
+ if coalesce(cardinality(p_user_ids),0)=0 or cardinality(p_user_ids)>5000 then raise exception 'eligibility_list_size_invalid'; end if;
  select stage,scope,school_id,district_key into v_stage,v_scope,v_school,v_district
  from public.elections where id=p_election_id for update;
  if not found or v_stage not in ('draft','nominations') then raise exception 'eligibility_locked'; end if;
+ if now()>=(select nominations_close_at from public.elections where id=p_election_id) then raise exception 'eligibility_window_closed'; end if;
  if exists(select 1 from unnest(p_user_ids) x where x is null) then raise exception 'invalid_user_list'; end if;
+ if v_scope='city' and exists(
+  select 1 from unnest(p_user_ids) x
+  left join public.profiles p on p.id=x
+  where p.id is null
+ ) then raise exception 'city_eligibility_requires_profiles'; end if;
  if v_scope='school' and exists(
   select 1 from unnest(p_user_ids) x
   left join public.profiles p on p.id=x
@@ -196,7 +202,7 @@ declare v_election uuid;
 begin
  if auth.uid() is null or not public.is_verification_representative() then raise exception 'candidate_review_forbidden'; end if;
  if p_decision not in ('approved','rejected') then raise exception 'invalid_decision'; end if;
- select c.election_id into v_election from public.election_candidates c join public.elections e on e.id=c.election_id where c.id=p_candidate_id and c.status='pending' and e.stage='review' for update of c;
+ select c.election_id into v_election from public.election_candidates c join public.elections e on e.id=c.election_id where c.id=p_candidate_id and c.status='pending' and e.stage='review' and c.user_id<>auth.uid() for update of c;
  if not found then raise exception 'candidate_not_pending'; end if;
  update public.election_candidates set status=p_decision,reviewed_by=auth.uid(),reviewed_at=now(),reviewer_note=left(coalesce(p_note,''),500) where id=p_candidate_id;
  insert into public.election_audit_log(election_id,actor_id,action,details)
@@ -225,6 +231,8 @@ begin
  if p_next_stage='campaign' and now()< (select nominations_close_at from public.elections where id=p_election_id) then raise exception 'nominations_not_closed'; end if;
  if p_next_stage='voting' and (now()< (select campaign_close_at from public.elections where id=p_election_id) or now()< (select voting_open_at from public.elections where id=p_election_id)) then raise exception 'voting_not_started'; end if;
  if p_next_stage='counting' and now()< (select voting_close_at from public.elections where id=p_election_id) then raise exception 'voting_not_closed'; end if;
+ if p_next_stage='campaign' and not exists(select 1 from public.election_candidates where election_id=p_election_id and status='approved') then raise exception 'no_approved_candidates'; end if;
+ if p_next_stage='certified' and exists(select 1 from public.election_objections where election_id=p_election_id and status in ('submitted','under_review')) then raise exception 'unresolved_objections'; end if;
  update public.elections set stage=p_next_stage,updated_at=now() where id=p_election_id;
  insert into public.election_audit_log(election_id,actor_id,action,details)
  values(p_election_id,auth.uid(),'stage_changed',jsonb_build_object('from',v_old,'to',p_next_stage,'reason',trim(p_reason)));
@@ -247,7 +255,7 @@ create or replace function public.get_election_results(p_election_id uuid)
 returns table(candidate_id uuid,display_name text,vote_count bigint)
 language plpgsql stable security definer set search_path=public,pg_temp as $function$
 begin
- if not exists(select 1 from public.elections where id=p_election_id and stage in ('counting','objections','certified')) then raise exception 'results_not_available'; end if;
+ if not exists(select 1 from public.elections where id=p_election_id and stage in ('objections','certified')) then raise exception 'results_not_available'; end if;
  return query select c.id,c.display_name,count(b.ballot_id)
  from public.election_candidates c
  left join public.election_ballots b on b.candidate_id=c.id and b.election_id=p_election_id
@@ -261,7 +269,7 @@ declare v_id uuid; v_stage text;
 begin
  if auth.uid() is null then raise exception 'not_authenticated'; end if;
  select stage into v_stage from public.elections where id=p_election_id;
- if v_stage not in ('objections','certified') then raise exception 'objection_window_closed'; end if;
+ if v_stage<>'objections' then raise exception 'objection_window_closed'; end if;
  if not exists(select 1 from public.election_eligibility where election_id=p_election_id and user_id=auth.uid()) then raise exception 'not_eligible'; end if;
  insert into public.election_objections(election_id,submitted_by,category,description)
  values(p_election_id,p_category,trim(p_description)) returning id into v_id;
@@ -275,7 +283,7 @@ declare v_election uuid;
 begin
  if auth.uid() is null or not public.is_verification_representative() then raise exception ''objection_review_forbidden''; end if;
  if p_decision not in (''resolved'',''dismissed'') or char_length(trim(coalesce(p_resolution,'''')))<10 then raise exception ''invalid_objection_resolution''; end if;
- select election_id into v_election from public.election_objections where id=p_objection_id and status in (''submitted'',''under_review'') for update;
+ select election_id into v_election from public.election_objections where id=p_objection_id and status in (''submitted'',''under_review'') and submitted_by<>auth.uid() for update;
  if not found then raise exception ''objection_not_pending''; end if;
  update public.election_objections set status=p_decision,resolution=left(trim(p_resolution),2000),reviewed_by=auth.uid(),reviewed_at=now()
  where id=p_objection_id;
