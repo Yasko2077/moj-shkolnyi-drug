@@ -11,6 +11,11 @@ begin
     raise exception 'event_registration_direct_write_still_allowed';
   end if;
 
+  if to_regprocedure('public.can_manage_events()') is not null
+     and has_function_privilege('authenticated',to_regprocedure('public.can_manage_events()'),'EXECUTE') then
+    raise exception 'legacy_event_management_helper_still_executable';
+  end if;
+
   if to_regprocedure('public.get_event_roster(text)') is not null
      and has_function_privilege('authenticated',to_regprocedure('public.get_event_roster(text)'),'EXECUTE') then
     raise exception 'legacy_unscoped_event_roster_still_executable';
