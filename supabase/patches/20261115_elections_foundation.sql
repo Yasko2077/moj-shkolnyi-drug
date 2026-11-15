@@ -61,15 +61,12 @@ create table if not exists public.election_eligibility (
 create table if not exists public.election_voter_receipts (
   election_id uuid not null references public.elections(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  ballot_id uuid not null unique,
-  cast_at timestamptz not null default now(),
   primary key(election_id,user_id)
 );
 create table if not exists public.election_ballots (
   ballot_id uuid primary key,
   election_id uuid not null references public.elections(id) on delete cascade,
   candidate_id uuid not null,
-  cast_at timestamptz not null default now(),
   foreign key(candidate_id,election_id) references public.election_candidates(id,election_id) on delete restrict
 );
 create index if not exists election_ballots_tally_idx on public.election_ballots(election_id,candidate_id);
@@ -242,7 +239,7 @@ begin
  if not found or v_e.stage<>'voting' or now()<v_e.voting_open_at or now()>=v_e.voting_close_at then raise exception 'voting_closed'; end if;
  if not exists(select 1 from public.election_eligibility where election_id=p_election_id and user_id=auth.uid()) then raise exception 'not_eligible_to_vote'; end if;
  if not exists(select 1 from public.election_candidates where id=p_candidate_id and election_id=p_election_id and status='approved') then raise exception 'candidate_not_approved'; end if;
- insert into public.election_voter_receipts(election_id,user_id,ballot_id) values(p_election_id,auth.uid(),v_ballot);
+ insert into public.election_voter_receipts(election_id,user_id) values(p_election_id,auth.uid());
  insert into public.election_ballots(ballot_id,election_id,candidate_id) values(v_ballot,p_election_id,p_candidate_id);
 end $function$;
 
