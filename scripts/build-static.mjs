@@ -78,8 +78,8 @@ for (const relativePath of publicFiles) {
 
 await writeFile(
   path.join(output, "supabase-config.js"),
-  "/* Generated public preview config. No private server keys belong here. */\\n" +
-    "window.YNTYMAK_CONFIG = " + JSON.stringify(browserConfig, null, 2) + ";\\n",
+  "/* Generated public preview config. No private server keys belong here. */" + String.fromCharCode(10) +
+    "window.YNTYMAK_CONFIG = " + JSON.stringify(browserConfig, null, 2) + ";" + String.fromCharCode(10),
   "utf8"
 );
 
