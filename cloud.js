@@ -185,6 +185,27 @@
     if(error) throw error;
     return data;
   }
+  async function listEvents() {
+    const c=getClient(); if(!c||!session) throw new Error('Войди в аккаунт для просмотра мероприятий.');
+    const {data,error}=await c.from('events').select('id,event_key,title,is_open,description,event_date,place_label,capacity,scope,target_label,district_key').order('event_date',{ascending:true});
+    if(error) throw error;
+    return (data||[]).map(e=>({id:e.id,title:e.title,description:e.description||'',date:e.event_date||'',place:e.place_label||'',capacity:e.capacity||40,registered:0,status:e.is_open?'open':'closed',scope:e.scope||'city',target:e.target_label||'Бишкек',category:e.event_key,source:'cloud'}));
+  }
+  async function createEvent({title,description,date,place,capacity,scope='city',target='Бишкек',district='',category='forum'}) {
+    const c=getClient(); if(!c||!session) throw new Error('Нет активной сессии.');
+    const {data,error}=await c.rpc('create_platform_event',{p_event_key:category,p_title:title,p_description:description,p_event_date:date,p_place_label:place,p_capacity:Number(capacity),p_scope:scope,p_target_label:target,p_district_key:district||null});
+    if(error) throw error; return data;
+  }
+  async function registerForEvent({eventId,name,school,grade}) {
+    const c=getClient(); if(!c||!session?.user) throw new Error('Войди в аккаунт, чтобы зарегистрироваться.');
+    const {data,error}=await c.rpc('register_for_event',{p_event_id:eventId,p_participant_name:name,p_school_label:school,p_grade_label:grade,p_participation_format:'individual',p_team_name:null});
+    if(error) throw error; return data;
+  }
+  async function listMyRegistrations() {
+    const c=getClient(); if(!c||!session) throw new Error('Нет активной сессии.');
+    const {data,error}=await c.from('event_registrations').select('id,event_id,status,created_at,events(title,event_date,place_label)').eq('user_id',session.user.id).order('created_at',{ascending:false});
+    if(error) throw error; return data||[];
+  }
   async function askHostedAI(message, language = 'ru', history = []) {
     const c = getClient();
     if (!cfg.enableHostedAI || !c || !session) throw new Error('Внешняя ИИ-модель не подключена. Доступен локальный помощник.');
@@ -196,10 +217,11 @@
   }
   window.YntymakCloud = {
     configured, getClient, init, refresh, signUp, signIn, signOut,
-    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, askHostedAI,
+    ensureProfile, checkAdmin, listInitiatives, createInitiative, listProjects, createProject, requestToJoinProject, listEvents, createEvent, registerForEvent, listMyRegistrations, askHostedAI,
     getSession: () => session, getUser: () => authUser,
     isAdmin: () => isAdmin, hostedAIEnabled: () => Boolean(cfg.enableHostedAI),
     initiativesEnabled: () => Boolean(cfg.enableCloudInitiatives),
-    projectsEnabled: () => Boolean(cfg.enableCloudProjects)
+    projectsEnabled: () => Boolean(cfg.enableCloudProjects),
+    eventsEnabled: () => Boolean(cfg.enableCloudEvents)
   };
 })();
