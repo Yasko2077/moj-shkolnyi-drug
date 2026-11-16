@@ -14,7 +14,13 @@ const TXT = {
   KG:{home:'Башкы бет',ideas:'Сунуштар',elections:'Шайлоолор',projects:'Долбоорлор жана командалар',events:'Иш-чаралар',surveys:'Пикир сурамжылоолору',news:'Жаңылыктар жана ресурстар',assistant:'ЖИ жардамчысы',profile:'Менин профилим',help:'Жардам жана коопсуздук',admin:'Башкаруу',login:'Кирүү / катталуу',logout:'Чыгуу'}
 };
 const now = new Date();
-const dateLabel = d => new Date(`${d}T12:00:00`).toLocaleDateString(state.lang==='KG'?'ky-KG':'ru-RU',{day:'numeric',month:'short',year:'numeric'});
+const dateLabel = d => {
+ const date=new Date(`${d}T12:00:00`);
+ if(state.lang==='KG'&&!Intl.DateTimeFormat.supportedLocalesOf(['ky-KG']).length){
+  return `${String(date.getDate()).padStart(2,'0')}.${String(date.getMonth()+1).padStart(2,'0')}.${date.getFullYear()}`;
+ }
+ return date.toLocaleDateString(state.lang==='KG'?'ky-KG':'ru-RU',{day:'numeric',month:'short',year:'numeric'});
+};
 const seed = {
   profile:{name:'Тестовый участник',school:'Школа № 12 (вымышленный пример)',district:'lenin',grade:'9 класс',about:'Интересуюсь школьными проектами, волонтёрством и командной работой.',interests:['Проекты','Экология'],verified:false},
   ideas:[
