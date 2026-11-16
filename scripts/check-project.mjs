@@ -184,6 +184,22 @@ check(/role="status"/.test(toastRegion) &&
   'Toast region must announce each complete notification as a polite status update.');
 check(app.includes("function toast(s){const el=document.createElement('div');el.className='toast';el.textContent=s;$('#toastRegion').append(el);"),
   'Toast messages must be inserted as text inside the accessible status region.');
+check(app.includes('aria-modal="true" aria-labelledby="modalTitle" tabindex="-1"') &&
+  app.includes('<h2 id="modalTitle">'),
+  'Modal dialogs must have an explicit accessible name and be programmatically focusable.');
+check(app.includes('modalReturnFocus=document.activeElement') &&
+  app.includes('focusTarget.focus()') &&
+  app.includes('if(returnFocus?.isConnected){returnFocus.focus();return;}'),
+  'Opening a modal must move focus inside and closing it must restore focus or move to the updated page heading.');
+const modalFocusHandler=app.slice(
+  app.indexOf("$('#modalRoot').addEventListener('keydown'"),
+  app.indexOf("$('#pageContent').addEventListener('input'")
+);
+check(modalFocusHandler.includes("if(e.key!=='Tab')return;") &&
+  modalFocusHandler.includes('e.shiftKey') &&
+  modalFocusHandler.includes('last.focus()') &&
+  modalFocusHandler.includes('first.focus()'),
+  'Modal keyboard focus must remain trapped for both Tab and Shift+Tab.');
 check(cloud.includes('p_organizer_access_consent:organizerAccessConsent') &&
   cloud.includes('organizerAccessConsent!==true'),
   'Cloud client must require event-specific organizer-access consent.');

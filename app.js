@@ -193,8 +193,28 @@ function adminTabContent(){if(state.adminTab==='overview')return `<div class="st
  return `<div class="list-grid"><div class="card"><div class="card-title">Создать выборы</div><p class="card-sub">Настрой уровень, должность, территории и даты. Утверждённые правила должны быть приложены к реальным выборам.</p>${btn('Настроить выборы','data-action="new-election"')}</div><div class="card"><div class="card-title">Создать мероприятие</div><p class="card-sub">Опубликовать описание, дату, место и лимит мест.</p>${btn('Новое мероприятие','data-action="new-event"')}</div><div class="card"><div class="card-title">Новости</div><p class="card-sub">Публиковать проверенные школьные объявления.</p>${btn('Добавить новость','data-action="new-news"')}</div><div class="card"><div class="card-title">Опросы мнения</div><p class="card-sub">Создавать необязательные консультационные опросы, не являющиеся официальным голосованием.</p>${btn('Создать опрос','data-action="new-poll"')}</div><div class="card"><div class="card-title">Аудит</div><p class="card-sub">История действий в демонстрационном браузере.</p>${db.audit.slice(-8).reverse().map(a=>`<div class="metric-line"><span>${esc(a.text)}</span><small>${esc(a.date)}</small></div>`).join('')||'<span class="small-note">Событий пока нет.</span>'}</div></div>`;}
 function render(){updateShell();const pages={home,ideas,elections,projects,events,surveys,news,assistant,profile,help,admin};if(state.page==='admin'&&!state.realAdmin)state.page='home';$('#pageContent').innerHTML=(pages[state.page]||home)();if(state.page==='assistant')$('#chatLog').scrollTop=$('#chatLog').scrollHeight;}
 function go(p){state.page=p;$('#sidebar').classList.remove('open');render();}
-function modal(title,body){$('#modalRoot').innerHTML=`<div class="modal-backdrop" data-backdrop><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="modal-head"><h2>${esc(title)}</h2><button class="modal-close" data-close-modal aria-label="Закрыть">×</button></div><div class="modal-body">${body}</div></div></div>`;}
-function closeModal(){$('#modalRoot').innerHTML='';}
+let modalReturnFocus=null;
+function modal(title,body){
+ const root=$('#modalRoot');
+ if(!root.querySelector('[role="dialog"]'))modalReturnFocus=document.activeElement;
+ root.innerHTML=`<div class="modal-backdrop" data-backdrop><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1"><div class="modal-head"><h2 id="modalTitle">${esc(title)}</h2><button class="modal-close" data-close-modal aria-label="Закрыть">×</button></div><div class="modal-body">${body}</div></div></div>`;
+ const dialog=root.querySelector('[role="dialog"]');
+ const focusTarget=$('input:not([type="hidden"]):not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),a[href]',dialog)
+  .find(el=>!el.hidden&&el.getClientRects().length>0)||dialog;
+ focusTarget.focus();
+}
+function closeModal(){
+ const root=$('#modalRoot');
+ if(!root.querySelector('[role="dialog"]'))return;
+ root.innerHTML='';
+ const returnFocus=modalReturnFocus;
+ modalReturnFocus=null;
+ Promise.resolve().then(()=>{
+  if(returnFocus?.isConnected){returnFocus.focus();return;}
+  const fallback=$('#pageContent h1')||$('#pageContent');
+  if(fallback){if(!fallback.hasAttribute('tabindex'))fallback.setAttribute('tabindex','-1');fallback.focus();}
+ });
+}
 const districtOptions=()=>DISTRICTS.map(d=>`<option value="${d.key}">${esc(d.ru)}</option>`).join('');
 function newIdea(){modal('Новое предложение',`<div class="notice gold" style="margin-bottom:13px">Внутреннее предложение для школьного сообщества. Не добавляй личные данные или обвинения против конкретных людей.</div><form id="ideaForm" class="field-grid"><div class="field full"><label>Короткое название</label><input name="title" minlength="5" maxlength="100" required></div><div class="field full"><label>Что хотелось бы улучшить?</label><textarea name="description" minlength="20" maxlength="900" required placeholder="Опиши проблему и возможное решение"></textarea></div><div class="field"><label>Категория</label><select name="category"><option>Школьная среда</option><option>Образование</option><option>Экология</option><option>Спорт и культура</option><option>Безопасность среды</option><option>Сотрудничество</option></select></div><div class="field"><label>Уровень</label><select name="scope"><option value="school">Моя школа</option><option value="district">Район</option><option value="city">Весь Бишкек</option></select></div><div class="field full"><label>Школа или территория</label><input name="target" maxlength="120" value="${esc(db.profile.school||'')}" required></div><div class="field full form-actions"><button type="button" class="btn btn-outline" data-close-modal>Отмена</button><button class="btn" type="submit">Отправить на модерацию</button></div></form>`);}
 function newProject(){modal('Новый проект',`<form id="projectForm" class="field-grid"><div class="field full"><label>Название проекта</label><input name="title" minlength="5" maxlength="100" required></div><div class="field full"><label>Краткое описание и ожидаемый результат</label><textarea name="description" minlength="20" maxlength="900" required></textarea></div><div class="field"><label>Направление</label><select name="category"><option>Образование</option><option>Экология</option><option>Спорт и культура</option><option>Технологии</option><option>Волонтёрство</option></select></div><div class="field"><label>Уровень</label><select name="scope"><option value="school">Моя школа</option><option value="district">Район</option><option value="city">Весь Бишкек</option></select></div><div class="field full"><label>Школа или территория</label><input name="target" value="${esc(db.profile.school)}" maxlength="120" required></div><div class="field full"><label>Первый шаг</label><input name="firstTask" maxlength="140" placeholder="Например, обсудить идею с куратором" required></div><div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit">Создать проект</button></div></form>`);}
@@ -379,6 +399,18 @@ $('#languageBtn').addEventListener('click',()=>{state.lang=state.lang==='RU'?'KG
 $('#mobileMenu').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
 document.addEventListener('click',e=>{const p=e.target.closest('[data-page]');if(p&&!$('#pageContent').contains(p))go(p.dataset.page);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+$('#modalRoot').addEventListener('keydown',e=>{
+ if(e.key!=='Tab')return;
+ const dialog=$('#modalRoot [role="dialog"]');
+ if(!dialog)return;
+ const focusable=$('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',dialog)
+  .filter(el=>!el.hidden&&el.getAttribute('aria-hidden')!=='true'&&el.getClientRects().length>0);
+ if(!focusable.length){e.preventDefault();dialog.focus();return;}
+ const first=focusable[0],last=focusable[focusable.length-1];
+ const outside=!dialog.contains(document.activeElement);
+ if(e.shiftKey&&(document.activeElement===first||document.activeElement===dialog||outside)){e.preventDefault();last.focus();}
+ else if(!e.shiftKey&&(document.activeElement===last||document.activeElement===dialog||outside)){e.preventDefault();first.focus();}
+});
 $('#pageContent').addEventListener('input',e=>{if(['ideaSearch','ideaScope','ideaStatus'].includes(e.target.id)){const q=($('#ideaSearch')?.value||'').toLowerCase(),scope=$('#ideaScope')?.value||'all',status=$('#ideaStatus')?.value||'all';$$('#ideaList .idea-card').forEach((el,i)=>{const item=db.ideas.filter(x=>x.status!=='review'||state.realAdmin)[i];el.hidden=!(item&&item.title.toLowerCase().includes(q)&&(scope==='all'||item.scope===scope)&&(status==='all'||item.status===status));});}});
 if(window.YntymakCloud?.configured()){
  window.YntymakCloud.init().then(async result=>{
