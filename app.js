@@ -229,6 +229,7 @@ function loginModal(){
   info:'Өзүңдүн электрондук почтаңды колдон. Катталгандан кийин даректи кат аркылуу ырастоо талап кылынышы мүмкүн. Кадимки аккаунт администратор укуктарын албайт.',
   localOnly:'Бул көчүрмөдө Supabase азырынча жөндөлө элек. Азыр жергиликтүү демо-сценарийлерди гана текшерүүгө болот.',
   emailLabel:'Электрондук почта',passwordLabel:'Сырсөз',displayNameLabel:'Көрсөтүлүүчү ысым',
+  loginPasswordHelp:'Аккаунтуңуздун сырсөзүн киргизиңиз.',
   passwordHelp:'Сырсөз кеминде 8 белгиден турушу керек.',
   signupNameHelp:'Көрсөтүлүүчү ысым боштуктарды алып салгандан кийин 2ден 70ке чейин белги болушу керек.',
   privacyAck:'Бул пилоттук прототип экенин түшүнөм жана купуя маалыматтарды киргизбейм.',
@@ -239,6 +240,7 @@ function loginModal(){
   info:'Используй собственную электронную почту. После регистрации может потребоваться подтверждение адреса из письма. Обычный аккаунт не получает полномочий администратора.',
   localOnly:'Supabase ещё не настроен в этой копии. Сейчас можно тестировать только локальные сценарии.',
   emailLabel:'Электронная почта',passwordLabel:'Пароль',displayNameLabel:'Имя для отображения',
+  loginPasswordHelp:'Введите пароль от аккаунта.',
   passwordHelp:'Пароль должен содержать не менее 8 символов.',
   signupNameHelp:'От 2 до 70 символов после удаления пробелов по краям.',
   privacyAck:'Я понимаю, что сейчас это пилотный прототип, и не буду вводить чувствительные данные.',
@@ -253,7 +255,7 @@ function loginModal(){
   '<form id="loginForm" class="field-grid" aria-labelledby="loginFormTitle" style="margin-top:14px">'+
    '<div class="field full"><div class="card-title" id="loginFormTitle">'+tx.loginHeading+'</div></div>'+
    '<div class="field full"><label for="loginEmail">'+tx.emailLabel+'</label><input id="loginEmail" name="email" type="email" autocomplete="email" required></div>'+
-   '<div class="field full"><label for="loginPassword">'+tx.passwordLabel+'</label><input id="loginPassword" name="password" type="password" minlength="8" autocomplete="current-password" aria-describedby="loginPasswordHelp" required><small id="loginPasswordHelp">'+tx.passwordHelp+'</small></div>'+
+   '<div class="field full"><label for="loginPassword">'+tx.passwordLabel+'</label><input id="loginPassword" name="password" type="password" autocomplete="current-password" aria-describedby="loginPasswordHelp" required><small id="loginPasswordHelp">'+tx.loginPasswordHelp+'</small></div>'+
    '<div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>'+tx.cancel+'</button><button class="btn" type="submit" '+(configured?'':'disabled')+'>'+tx.login+'</button></div>'+
   '</form>'+
   '<div class="section-row"><h2 id="signupFormTitle">'+tx.signupHeading+'</h2></div>'+

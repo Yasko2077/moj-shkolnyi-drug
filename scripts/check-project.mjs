@@ -251,6 +251,17 @@ check(authModalMarkup.includes("emailLabel:'Электронная почта'")
   authModalMarkup.includes("passwordLabel:'Пароль'") &&
   authModalMarkup.includes("passwordLabel:'Сырсөз'"),
   'Authentication labels must be available in Russian and Kyrgyz.');
+const loginPasswordInput = authModalMarkup.match(/<input id="loginPassword"[^>]*>/)?.[0] || '';
+const signupPasswordInput = authModalMarkup.match(/<input id="signupPassword"[^>]*>/)?.[0] || '';
+check(loginPasswordInput.includes('required') && !loginPasswordInput.includes('minlength=') &&
+  authModalMarkup.includes("'+tx.loginPasswordHelp+'"),
+  'Login must require a password without applying the signup-only minimum length.');
+check(signupPasswordInput.includes('minlength="8"') &&
+  authModalMarkup.includes("'+tx.passwordHelp+'"),
+  'Signup must retain the eight-character minimum and its own password guidance.');
+check(authModalMarkup.includes("loginPasswordHelp:'Введите пароль от аккаунта.'") &&
+  authModalMarkup.includes("loginPasswordHelp:'Аккаунтуңуздун сырсөзүн киргизиңиз.'"),
+  'Login password guidance must be available in Russian and Kyrgyz.');
 const signupHandlerStart = app.indexOf("if(f.id==='signupForm'){");
 const signupHandlerEnd = app.indexOf('\n});', signupHandlerStart);
 const signupHandlerMarkup = signupHandlerStart >= 0 && signupHandlerEnd > signupHandlerStart
