@@ -139,7 +139,7 @@ function profile(){
   schoolNotConfirmed:'Мектеп ырастала элек',pendingSchool:'Азырынча ырасталган эмес',districtPending:'Мектеп ырасталгандан кийин аныкталат',
   noticeCloud:'Мектепти ыйгарым укуктуу, текшерилген өкүл гана бекитет. Аны же районду өз алдынча өзгөртө албайсың.',
   noticeLocal:'Мектепке таандык экениңди ыйгарым укуктуу чоң киши өзүнчө ырастайт. Демо нускага документтерди же жеке маалыматтарды жүктөбө.',
-  editProfile:'Профилди өзгөртүү',displayName:'Көрсөтүлүүчү ысым',school:'Мектеп',district:'Район',
+  editProfile:'Профилди өзгөртүү',displayName:'Көрсөтүлүүчү ысым',displayNameHelp:'Атың 2ден 70ке чейин белгиден турушу керек.',school:'Мектеп',district:'Район',
   grade:'Класс',gradePlaceholder:'Мисалы, 9-класс',about:'Өзүм жөнүндө / Ишмердигим',
   aboutPlaceholder:'Кызыгууларың, долбоорлоруң жана тажрыйбаң тууралуу жаз…',
   aboutCloudNote:'Бул талаа ушул браузерде гана сакталат, жарыяланбайт жана булутка жөнөтүлбөйт. Жеке байланыш маалыматтарын же башка адамдар тууралуу маалыматтарды жазба.',
@@ -155,7 +155,7 @@ function profile(){
   schoolNotConfirmed:'Школа не подтверждена',pendingSchool:'Пока не подтверждена',districtPending:'Определится после подтверждения школы',
   noticeCloud:'Школа назначается только подтверждённым представителем. Самостоятельно изменить её или район нельзя.',
   noticeLocal:'Подтверждение принадлежности к школе выполняется отдельно уполномоченным взрослым координатором. Не прикладывай документы и личные данные в демо.',
-  editProfile:'Редактировать профиль',displayName:'Имя для отображения',school:'Школа',district:'Район',
+  editProfile:'Редактировать профиль',displayName:'Имя для отображения',displayNameHelp:'От 2 до 70 символов после удаления пробелов по краям.',school:'Школа',district:'Район',
   grade:'Класс',gradePlaceholder:'Например, 9 класс',about:'О себе / Моя деятельность',
   aboutPlaceholder:'Расскажи об интересах, проектах и опыте…',
   aboutCloudNote:'Это поле сохраняется только в этом браузере, не публикуется и не отправляется в облако. Не пиши личные контакты или сведения о других людях.',
@@ -167,19 +167,19 @@ function profile(){
   verified:'Школа подтверждена',unverified:'Школа не подтверждена'
  };
  const schoolControl=cloudMode
-  ? '<input value="'+esc(p.school||tx.pendingSchool)+'" readonly disabled>'
-  : '<input name="school" maxlength="120" value="'+esc(p.school)+'" placeholder="'+esc(tx.school)+'">';
+  ? '<input id="profileSchool" value="'+esc(p.school||tx.pendingSchool)+'" readonly disabled>'
+  : '<input id="profileSchool" name="school" maxlength="120" value="'+esc(p.school)+'" placeholder="'+esc(tx.school)+'">';
  const districtControl=cloudMode
-  ? '<input value="'+esc(distName(p.district)||tx.districtPending)+'" readonly disabled>'
-  : '<select name="district">'+DISTRICTS.map(d=>'<option value="'+d.key+'" '+(p.district===d.key?'selected':'')+'>'+esc(d[state.lang==='KG'?'ky':'ru'])+'</option>').join('')+'</select>';
+  ? '<input id="profileDistrict" value="'+esc(distName(p.district)||tx.districtPending)+'" readonly disabled>'
+  : '<select id="profileDistrict" name="district">'+DISTRICTS.map(d=>'<option value="'+d.key+'" '+(p.district===d.key?'selected':'')+'>'+esc(d[state.lang==='KG'?'ky':'ru'])+'</option>').join('')+'</select>';
  return `${heading(tx.kicker,tx.title,tx.description)}
  <div class="profile-grid"><section class="card profile-card"><div class="profile-big-avatar">${esc(initials(p.name))}</div><h2>${esc(p.name)}</h2><p>${esc(p.school||tx.schoolNotConfirmed)}</p>${tag(p.verified?tx.verified:tx.unverified,p.verified?'':'gold')}<div class="notice gold" style="text-align:left;margin-top:16px">${cloudMode?tx.noticeCloud:tx.noticeLocal}</div></section>
- <section class="card"><div class="card-title">${tx.editProfile}</div><form id="profileForm" class="field-grid">
- <div class="field full"><label>${tx.displayName}</label><input name="name" minlength="2" maxlength="70" value="${esc(p.name)}" required></div>
- <div class="field full"><label>${tx.school}</label>${schoolControl}</div>
- <div class="field"><label>${tx.district}</label>${districtControl}</div>
- <div class="field"><label>${tx.grade}</label><input name="grade" maxlength="30" value="${esc(p.grade)}" placeholder="${tx.gradePlaceholder}"></div>
- <div class="field full"><label>${tx.about}</label><textarea name="about" maxlength="700" placeholder="${tx.aboutPlaceholder}">${esc(p.about)}</textarea><small>${cloudMode?tx.aboutCloudNote:tx.aboutLocalNote}</small></div>
+ <section class="card"><div class="card-title" id="profileFormTitle">${tx.editProfile}</div><form id="profileForm" class="field-grid" aria-labelledby="profileFormTitle">
+ <div class="field full"><label for="profileName">${tx.displayName}</label><input id="profileName" name="name" minlength="2" maxlength="70" value="${esc(p.name)}" aria-describedby="profileNameHelp" required><small id="profileNameHelp">${tx.displayNameHelp}</small></div>
+ <div class="field full"><label for="profileSchool">${tx.school}</label>${schoolControl}</div>
+ <div class="field"><label for="profileDistrict">${tx.district}</label>${districtControl}</div>
+ <div class="field"><label for="profileGrade">${tx.grade}</label><input id="profileGrade" name="grade" maxlength="30" value="${esc(p.grade)}" placeholder="${tx.gradePlaceholder}"></div>
+ <div class="field full"><label for="profileAbout">${tx.about}</label><textarea id="profileAbout" name="about" maxlength="700" aria-describedby="profileAboutHelp" placeholder="${tx.aboutPlaceholder}">${esc(p.about)}</textarea><small id="profileAboutHelp">${cloudMode?tx.aboutCloudNote:tx.aboutLocalNote}</small></div>
  <div class="field full"><small>${cloudMode?tx.cloudHint:tx.localHint}</small></div>
  <div class="field full form-actions"><button class="btn" type="submit">${tx.save}</button></div></form></section></div>
  <div class="section-row"><h2>${tx.regs}</h2></div><div class="card">${regs.length?regs.map(r=>'<div class="metric-line"><span>'+esc(r.eventTitle)+'</span><strong>'+esc(r.status)+'</strong></div>').join(''):'<p class="card-sub">'+tx.none+'</p>'}</div>`;

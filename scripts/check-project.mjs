@@ -219,6 +219,16 @@ check(app.includes('name="name" minlength="2" maxlength="70"') &&
   app.includes("displayName=String(d.get('name')||'').trim()") &&
   app.includes('if(displayName.length<2||displayName.length>70)'),
   'Profile form must validate a trimmed 2–70 character display name before local or cloud persistence.');
+const profileMarkup = app.slice(app.indexOf('function profile(){'), app.indexOf('function help(){', app.indexOf('function profile(){')));
+check(profileMarkup.includes('aria-labelledby="profileFormTitle"') && profileMarkup.includes('id="profileFormTitle"'),
+  'Profile form must have an accessible name.');
+for (const fieldId of ['profileName','profileSchool','profileDistrict','profileGrade','profileAbout']) {
+  check(profileMarkup.includes(`for="${fieldId}"`) && profileMarkup.includes(`id="${fieldId}"`),
+    `Profile field label must be programmatically associated: ${fieldId}.`);
+}
+check(profileMarkup.includes('aria-describedby="profileNameHelp"') && profileMarkup.includes('id="profileNameHelp"') &&
+  profileMarkup.includes('aria-describedby="profileAboutHelp"') && profileMarkup.includes('id="profileAboutHelp"'),
+  'Profile name and about fields must expose their visible help text to assistive technology.');
 check(app.includes("const langCode=()=>state.lang==='KG'?'ky':'ru';"),
   'Kyrgyz locale must map to the Supabase language code ky.');
 const statusLabels = app.slice(app.indexOf('const STATUS_LABELS ='), app.indexOf('const statusName ='));
