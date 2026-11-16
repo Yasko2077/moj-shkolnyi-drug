@@ -299,18 +299,18 @@ function registerEvent(id){
    consent:'Я согласен(на) предоставить моё имя для отображения, школу и класс из профиля создателю или уполномоченному организатору именно этого мероприятия. Это не публичный список.',
    cancel:'Отмена',submit:'Зарегистрироваться'
   };
-  modal(t.title,`<form id="registrationForm" data-event="${esc(id)}" class="field-grid">
+  modal(t.title,`<form id="registrationForm" data-event="${esc(id)}" class="field-grid" aria-labelledby="modalTitle">
    <div class="notice gold">${t.info}</div>
    <div class="field full"><label class="lang-hint"><input type="checkbox" name="organizerAccessConsent" required> ${t.consent}</label></div>
    <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>${t.cancel}</button><button class="btn" type="submit">${t.submit}</button></div>
   </form>`);
   return;
  }
- modal('Регистрация на мероприятие',`<form id="registrationForm" data-event="${esc(id)}" class="field-grid">
+ modal('Регистрация на мероприятие',`<form id="registrationForm" data-event="${esc(id)}" class="field-grid" aria-labelledby="modalTitle">
   <div class="notice gold">Это локальное демо. Используй только вымышленные данные, не указывай настоящие персональные данные школьников.</div>
-  <div class="field full"><label>Имя для демо-списка</label><input name="name" maxlength="70" value="${esc(db.profile.name)}" required></div>
-  <div class="field full"><label>Школа (демо)</label><input name="school" maxlength="120" value="${esc(db.profile.school)}" required></div>
-  <div class="field"><label>Класс (демо)</label><input name="grade" maxlength="30" value="${esc(db.profile.grade)}" required></div>
+  <div class="field full"><label for="registrationName">Имя для демо-списка</label><input id="registrationName" name="name" maxlength="70" value="${esc(db.profile.name)}" required></div>
+  <div class="field full"><label for="registrationSchool">Школа (демо)</label><input id="registrationSchool" name="school" maxlength="120" value="${esc(db.profile.school)}" required></div>
+  <div class="field"><label for="registrationGrade">Класс (демо)</label><input id="registrationGrade" name="grade" maxlength="30" value="${esc(db.profile.grade)}" required></div>
   <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit">Подать заявку</button></div>
  </form>`);
 }
