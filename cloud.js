@@ -44,7 +44,15 @@
     if (!c) return { configured: false, session: null, isAdmin: false };
     await refresh();
     c.auth.onAuthStateChange((_event, next) => {
+      const previousUserId = session?.user?.id || null;
       session = next || null; authUser = session?.user || null;
+      const nextUserId = session?.user?.id || null;
+      if (previousUserId !== nextUserId) {
+        isAdmin = false;
+        window.dispatchEvent(new CustomEvent('yntymak:auth-change', {
+          detail: { userId: nextUserId }
+        }));
+      }
       if (!session) isAdmin = false;
     });
     if (session) {

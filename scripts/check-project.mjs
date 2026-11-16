@@ -199,6 +199,25 @@ check(app.includes("const langCode=()=>state.lang==='KG'?'ky':'ru';"),
   'Kyrgyz locale must map to the Supabase language code ky.');
 check(app.includes('function activateAccountStore()') && app.includes('localStorage.setItem(activeStore,JSON.stringify(db))'),
   'Browser demo data must be stored in an account-specific local namespace.');
+const authStateHandler = cloud.slice(
+  cloud.indexOf('c.auth.onAuthStateChange('),
+  cloud.indexOf('    if (session) {', cloud.indexOf('c.auth.onAuthStateChange('))
+);
+check(authStateHandler.includes('previousUserId !== nextUserId') &&
+  authStateHandler.includes("new CustomEvent('yntymak:auth-change'") &&
+  !authStateHandler.includes('await '),
+  'Auth callback must notify identity changes without awaiting Supabase work.');
+const authChangeHandler = app.slice(
+  app.indexOf("window.addEventListener('yntymak:auth-change'"),
+  app.indexOf("$('#authButton').addEventListener", app.indexOf("window.addEventListener('yntymak:auth-change'"))
+);
+check(authChangeHandler.includes('activateAccountStore();') &&
+  authChangeHandler.indexOf('activateAccountStore();') < authChangeHandler.indexOf('Promise.resolve().then') &&
+  authChangeHandler.includes('state.cloudProfile=false') &&
+  authChangeHandler.includes('await window.YntymakCloud.ensureProfile()') &&
+  authChangeHandler.includes('await window.YntymakCloud.checkAdmin()') &&
+  authChangeHandler.includes('await loadCloudProfile()'),
+  'Auth identity changes must switch local storage first, clear stale privileges, and reload the new account profile.');
 check(app.includes('readonly disabled'),
   'Cloud-verified school and district fields must be read-only in the UI.');
 check(app.includes("kicker:'ЖЕКЕ КАБИНЕТИҢ'") && app.includes("kicker:'ТВОЯ УЧЁТНАЯ ЗАПИСЬ'"),

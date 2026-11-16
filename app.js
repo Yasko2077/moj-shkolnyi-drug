@@ -324,6 +324,24 @@ document.addEventListener('submit',async e=>{
  if(f.id==='loginForm'){e.preventDefault();const d=new FormData(f);try{const result=await window.YntymakCloud.signIn({email:d.get('email').trim(),password:d.get('password')});state.admin=result.isAdmin;state.realAdmin=result.isAdmin;try{await loadCloudProfile();}catch(profileError){console.warn('Cloud profile could not be loaded:',profileError.message);}closeModal();render();toast(result.isAdmin?'Вход выполнен. Подтверждены права единственного администратора.':'Вход выполнен. Добро пожаловать!');}catch(err){toast(err.message||'Не удалось войти.');}}
  if(f.id==='signupForm'){e.preventDefault();const d=new FormData(f);if(!window.YntymakCloud?.configured()){toast('Сначала настрой Supabase Auth.');return;}try{const result=await window.YntymakCloud.signUp({email:d.get('email').trim(),password:d.get('password'),displayName:d.get('displayName').trim(),language:langCode()});if(window.YntymakCloud?.getSession()){try{await loadCloudProfile();}catch(profileError){console.warn('Cloud profile could not be loaded:',profileError.message);}}closeModal();toast(result.emailConfirmationRequired?'Письмо отправлено. Подтверди адрес, затем войди в аккаунт.':'Аккаунт создан. Профиль подготовлен.');}catch(err){toast(err.message||'Не удалось зарегистрироваться.');}}
 });
+window.addEventListener('yntymak:auth-change', event => {
+ const userId=event.detail?.userId||null;
+ state.admin=false;state.realAdmin=false;state.cloudProfile=false;
+ activateAccountStore();
+ render();
+ if(!userId)return;
+ Promise.resolve().then(async()=>{
+  if(window.YntymakCloud?.getSession()?.user?.id!==userId)return;
+  try{
+   await window.YntymakCloud.ensureProfile();
+   const isAdmin=await window.YntymakCloud.checkAdmin();
+   if(window.YntymakCloud?.getSession()?.user?.id!==userId)return;
+   state.admin=isAdmin;state.realAdmin=isAdmin;
+   await loadCloudProfile();
+  }catch(err){console.warn('Auth state refresh:',err.message);}
+  if(window.YntymakCloud?.getSession()?.user?.id===userId)render();
+ });
+});
 $('#authButton').addEventListener('click',()=>{if(window.YntymakCloud?.getSession()){go('profile');toast('Аккаунт активен.');}else loginModal();});
 $('#signOutButton').addEventListener('click',async()=>{try{await window.YntymakCloud?.signOut();}catch(e){toast(e.message);return;}state.admin=false;state.realAdmin=false;state.cloudProfile=false;activateAccountStore();render();toast('Сессия завершена.');});
 $('#languageBtn').addEventListener('click',()=>{state.lang=state.lang==='RU'?'KG':'RU';render();});
