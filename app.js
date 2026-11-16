@@ -64,16 +64,36 @@ const langCode=()=>state.lang==='KG'?'ky':'ru';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const initials=v=>(v||'Ы').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
 const distName=k=>DISTRICTS.find(x=>x.key===k)?.[state.lang==='KG'?'ky':'ru']||'';
-const statusName=s=>({review:'На проверке',open:'Открыто для обсуждения',in_progress:'В работе',accepted:'Принято к реализации',rejected:'Не принято',closed:'Завершено',draft:'Черновик',nominations:'Приём заявок',campaign:'Кампания кандидатов',voting:'Голосование',cancelled:'Отменено',planning:'Планирование',team:'Поиск команды',active:'Выполняется',completed:'Завершён'})[s]||s;
-const pageNames={home:'Главная',ideas:'Предложения',elections:'Выборы',projects:'Проекты и команды',events:'Мероприятия',surveys:'Опросы мнения',news:'Новости и ресурсы',assistant:'ИИ-помощник',profile:'Мой профиль',help:'Помощь и безопасность',admin:'Панель управления'};
+const STATUS_LABELS = {
+ RU: {
+  review: 'На проверке', open: 'Открыто для обсуждения', in_progress: 'В работе',
+  accepted: 'Принято к реализации', rejected: 'Не принято', closed: 'Завершено',
+  draft: 'Черновик', nominations: 'Приём заявок', campaign: 'Кампания кандидатов',
+  voting: 'Голосование', cancelled: 'Отменено', planning: 'Планирование',
+  team: 'Поиск команды', active: 'Выполняется', completed: 'Завершён'
+ },
+ KG: {
+  review: 'Текшерилүүдө', open: 'Талкууга ачык', in_progress: 'Иш жүрүп жатат',
+  accepted: 'Ишке ашырууга кабыл алынды', rejected: 'Кабыл алынган жок', closed: 'Аяктады',
+  draft: 'Каралама', nominations: 'Талапкерлерди кабыл алуу', campaign: 'Үгүт өнөктүгү',
+  voting: 'Добуш берүү', cancelled: 'Жокко чыгарылды', planning: 'Пландоо',
+  team: 'Команда издөө', active: 'Аткарылууда', completed: 'Аяктады'
+ }
+};
+const statusName = s => STATUS_LABELS[state.lang]?.[s] || STATUS_LABELS.RU[s] || s;
+const pageNames={home:'home',ideas:'ideas',elections:'elections',projects:'projects',events:'events',surveys:'surveys',news:'news',assistant:'assistant',profile:'profile',help:'help',admin:'admin'};
 function activateAccountStore(){const userId=window.YntymakCloud?.getSession()?.user?.id;const nextStore=userId?`${STORE}:account:${userId}`:STORE;if(nextStore!==activeStore){activeStore=nextStore;db=readLocalStore(activeStore);}}
 function persist(){try{localStorage.setItem(activeStore,JSON.stringify(db));}catch{toast('Не удалось сохранить тестовые данные в этом браузере.');}}
 function toast(s){const el=document.createElement('div');el.className='toast';el.textContent=s;$('#toastRegion').append(el);setTimeout(()=>el.remove(),4200);}
 function heading(kicker,title,desc,action=''){return `<div class="page-heading"><div><div class="eyebrow">${esc(kicker)}</div><h1>${esc(title)}</h1><p>${esc(desc)}</p></div>${action?`<div class="heading-actions">${action}</div>`:''}</div>`;}
 function tag(s,cls=''){return `<span class="tag ${cls}">${esc(s)}</span>`;}
 function btn(label,attrs='',cls=''){return `<button class="btn ${cls}" ${attrs}>${label}</button>`;}
-function scopeLabel(x){return x==='school'?'Школа':x==='district'?'Район':'Весь Бишкек';}
-function updateShell(){document.documentElement.lang=state.lang==='KG'?'ky':'ru';const p=db.profile;$('#sidebarName').textContent=p.name||'Гость';$('#sidebarMeta').textContent=p.school||'Профиль не заполнен';$('#sidebarAvatar').textContent=initials(p.name);$('#topAvatar').textContent=initials(p.name);$('#crumb').textContent=pageNames[state.page]||'Ынтымак';$('#ideaCount').textContent=db.ideas.filter(x=>x.status==='open').length;$('#environmentLabel').textContent=state.realAdmin?'АККАУНТ АДМИНИСТРАТОРА ПРОВЕРЕН · ДЕМО-ДАННЫЕ ЛОКАЛЬНЫЕ':'ПРОТОТИП · ТОЛЬКО ВЫМЫШЛЕННЫЕ ДАННЫЕ';$('#modeLabel').textContent=state.realAdmin?'Администратор · локальный тест':window.YntymakCloud?.configured()?'Supabase Auth подключён':'Демо-режим';$('#authButton').textContent=window.YntymakCloud?.getSession()? 'Аккаунт / профиль':t('login');$('#signOutButton').hidden=!window.YntymakCloud?.getSession();$('#adminNav').hidden=!state.realAdmin;$$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===state.page));$$('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;el.textContent=t(key);});$('#languageBtn').innerHTML=state.lang==='RU'?'RU <span>·</span> KG':'KG <span>·</span> RU';}
+const SCOPE_LABELS = {
+ RU: {school: 'Школа', district: 'Район', city: 'Весь Бишкек'},
+ KG: {school: 'Мектеп', district: 'Район', city: 'Бишкек шаары'}
+};
+const scopeLabel = x => SCOPE_LABELS[state.lang]?.[x] || SCOPE_LABELS.RU[x] || SCOPE_LABELS.RU.city;
+function updateShell(){document.documentElement.lang=state.lang==='KG'?'ky':'ru';const p=db.profile;$('#sidebarName').textContent=p.name||'Гость';$('#sidebarMeta').textContent=p.school||'Профиль не заполнен';$('#sidebarAvatar').textContent=initials(p.name);$('#topAvatar').textContent=initials(p.name);$('#crumb').textContent=t(pageNames[state.page]||'home');$('#ideaCount').textContent=db.ideas.filter(x=>x.status==='open').length;$('#environmentLabel').textContent=state.realAdmin?'АККАУНТ АДМИНИСТРАТОРА ПРОВЕРЕН · ДЕМО-ДАННЫЕ ЛОКАЛЬНЫЕ':'ПРОТОТИП · ТОЛЬКО ВЫМЫШЛЕННЫЕ ДАННЫЕ';$('#modeLabel').textContent=state.realAdmin?'Администратор · локальный тест':window.YntymakCloud?.configured()?'Supabase Auth подключён':'Демо-режим';$('#authButton').textContent=window.YntymakCloud?.getSession()? 'Аккаунт / профиль':t('login');$('#signOutButton').hidden=!window.YntymakCloud?.getSession();$('#adminNav').hidden=!state.realAdmin;$$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===state.page));$$('[data-i18n]').forEach(el=>{const key=el.dataset.i18n;el.textContent=t(key);});$('#languageBtn').innerHTML=state.lang==='RU'?'RU <span>·</span> KG':'KG <span>·</span> RU';}
 function home(){const ideas=db.ideas.filter(x=>x.status==='open').length, elections=db.elections.filter(x=>!['closed','cancelled'].includes(x.stage)).length, projects=db.projects.length, events=db.events.filter(x=>x.status==='open').length;return `${heading('ЕДИНСТВО НАЧИНАЕТСЯ С УЧАСТИЯ','Твоя школа. Твои идеи. Общий город.','Ынтымак помогает ученикам Бишкека создавать проекты, обмениваться опытом и участвовать в жизни школьного сообщества.',btn('＋ Предложить идею','data-action="new-idea"'))}
 <section class="hero"><div class="hero-content"><div class="hero-kicker">ЫНТЫМАК · УЧЕНИЧЕСКОЕ УЧАСТИЕ В БИШКЕКЕ</div><h2>От идеи в классе —<br>к проекту для города.</h2><p>Предлагай улучшения, собирай команду, учись организовывать события и следи за тем, как школьные инициативы переходят от замысла к результату.</p><div class="hero-actions">${btn('Открыть проекты ↗','data-page="projects"')}${btn('Спросить ИИ-помощника','data-page="assistant"','btn-ghost')}</div></div><div class="hero-art"><div class="ornament"><span>Ы</span></div><small>БИРГЕ · БИШКЕК · КЕЛЕЧЕК</small></div></section>
 <div class="stats-grid"><div class="stat-card"><span class="stat-icon">✳</span><div><strong>${ideas}</strong><small>Идей открыто для обсуждения</small></div></div><div class="stat-card"><span class="stat-icon">◈</span><div><strong>${elections}</strong><small>Активных учебных выборов</small></div></div><div class="stat-card"><span class="stat-icon">↗</span><div><strong>${projects}</strong><small>Проектов в банке</small></div></div><div class="stat-card"><span class="stat-icon">▦</span><div><strong>${events}</strong><small>Открытых мероприятий</small></div></div></div>

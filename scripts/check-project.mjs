@@ -197,6 +197,20 @@ check(app.includes('name="name" minlength="2" maxlength="70"') &&
   'Profile form must validate a trimmed 2–70 character display name before local or cloud persistence.');
 check(app.includes("const langCode=()=>state.lang==='KG'?'ky':'ru';"),
   'Kyrgyz locale must map to the Supabase language code ky.');
+const statusLabels = app.slice(app.indexOf('const STATUS_LABELS ='), app.indexOf('const statusName ='));
+const statusKeys = ['review','open','in_progress','accepted','rejected','closed','draft','nominations','campaign','voting','cancelled','planning','team','active','completed'];
+check(statusLabels.includes('RU: {') && statusLabels.includes('KG: {') &&
+  statusKeys.every(key => statusLabels.split(key + ':').length - 1 === 2),
+  'Every known status must have Russian and Kyrgyz labels.');
+const scopeLabels = app.slice(app.indexOf('const SCOPE_LABELS ='), app.indexOf('const scopeLabel ='));
+check(scopeLabels.includes('RU: {') && scopeLabels.includes('KG: {') &&
+  ['school','district','city'].every(key => scopeLabels.split(key + ':').length - 1 === 2),
+  'Every territory scope must have Russian and Kyrgyz labels.');
+check(app.includes("const statusName = s => STATUS_LABELS[state.lang]?.[s] || STATUS_LABELS.RU[s] || s;") &&
+  app.includes("const scopeLabel = x => SCOPE_LABELS[state.lang]?.[x] || SCOPE_LABELS.RU[x] || SCOPE_LABELS.RU.city;"),
+  'Status and scope labels must use the selected language with safe fallbacks.');
+check(app.includes("$('#crumb').textContent=t(pageNames[state.page]||'home');"),
+  'The current-page breadcrumb must use the selected navigation dictionary.');
 check(app.includes("toLocaleDateString(state.lang==='KG'?'ky-KG':'ru-RU'") &&
   app.includes("Intl.DateTimeFormat.supportedLocalesOf(['ky-KG']).length") &&
   app.includes("padStart(2,'0')"),
