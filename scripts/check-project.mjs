@@ -229,6 +229,49 @@ for (const fieldId of ['profileName','profileSchool','profileDistrict','profileG
 check(profileMarkup.includes('aria-describedby="profileNameHelp"') && profileMarkup.includes('id="profileNameHelp"') &&
   profileMarkup.includes('aria-describedby="profileAboutHelp"') && profileMarkup.includes('id="profileAboutHelp"'),
   'Profile name and about fields must expose their visible help text to assistive technology.');
+
+const authModalStart = app.indexOf('function loginModal(){');
+const authModalEnd = app.indexOf('\nfunction viewElection', authModalStart);
+const authModalMarkup = authModalStart >= 0 && authModalEnd > authModalStart
+  ? app.slice(authModalStart, authModalEnd)
+  : '';
+check(authModalMarkup.includes('aria-labelledby="loginFormTitle"') &&
+  authModalMarkup.includes('aria-labelledby="signupFormTitle"'),
+  'Login and signup forms must each have an accessible name.');
+for (const fieldId of ['loginEmail','loginPassword','signupDisplayName','signupEmail','signupPassword','signupPrivacyAck']) {
+  check(authModalMarkup.includes('for="'+fieldId+'"') && authModalMarkup.includes('id="'+fieldId+'"'),
+    'Authentication field label must be associated with its control: '+fieldId+'.');
+}
+for (const helpId of ['loginPasswordHelp','signupNameHelp','signupPasswordHelp']) {
+  check(authModalMarkup.includes('aria-describedby="'+helpId+'"') && authModalMarkup.includes('id="'+helpId+'"'),
+    'Authentication field must expose its visible help text: '+helpId+'.');
+}
+check(authModalMarkup.includes("emailLabel:'Электронная почта'") &&
+  authModalMarkup.includes("emailLabel:'Электрондук почта'") &&
+  authModalMarkup.includes("passwordLabel:'Пароль'") &&
+  authModalMarkup.includes("passwordLabel:'Сырсөз'"),
+  'Authentication labels must be available in Russian and Kyrgyz.');
+const signupHandlerStart = app.indexOf("if(f.id==='signupForm'){");
+const signupHandlerEnd = app.indexOf('\n});', signupHandlerStart);
+const signupHandlerMarkup = signupHandlerStart >= 0 && signupHandlerEnd > signupHandlerStart
+  ? app.slice(signupHandlerStart, signupHandlerEnd)
+  : '';
+check(signupHandlerMarkup.includes("displayName.length<2||displayName.length>70") &&
+  signupHandlerMarkup.includes('nameField.reportValidity()') &&
+  signupHandlerMarkup.indexOf('nameField.reportValidity()') < signupHandlerMarkup.indexOf('window.YntymakCloud.signUp'),
+  'Signup must reject a trimmed display name outside 2–70 characters before calling Supabase.');
+const cloudSignupStart = cloud.indexOf('async function signUp(');
+const cloudSignupEnd = cloud.indexOf('\n  async function signIn(', cloudSignupStart);
+const cloudSignupMarkup = cloudSignupStart >= 0 && cloudSignupEnd > cloudSignupStart
+  ? cloud.slice(cloudSignupStart, cloudSignupEnd)
+  : '';
+check(cloudSignupMarkup.includes("const cleanName=String(displayName||'').trim();") &&
+  cloudSignupMarkup.includes('cleanName.length<2||cleanName.length>70') &&
+  cloudSignupMarkup.includes("typeof password!=='string'||password.length<8") &&
+  cloudSignupMarkup.includes("!['ru','ky'].includes(language)") &&
+  cloudSignupMarkup.includes('display_name: cleanName'),
+  'Cloud signup helper must validate normalized name, password length and supported language before Auth signup.');
+
 check(app.includes("const langCode=()=>state.lang==='KG'?'ky':'ru';"),
   'Kyrgyz locale must map to the Supabase language code ky.');
 const statusLabels = app.slice(app.indexOf('const STATUS_LABELS ='), app.indexOf('const statusName ='));

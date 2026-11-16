@@ -63,14 +63,24 @@
   }
   async function signUp({ email, password, displayName, language = 'ru' }) {
     const c = getClient(); if (!c) throw new Error('Подключение Supabase ещё не настроено.');
+    const cleanEmail=String(email||'').trim();
+    const cleanName=String(displayName||'').trim();
+    if(!cleanEmail) throw new Error('Укажи электронную почту.');
+    if(cleanName.length<2||cleanName.length>70){
+      throw new Error(language==='ky'?'Көрсөтүлүүчү ысым 2ден 70ке чейин белгиден турушу керек.':'Имя должно содержать от 2 до 70 символов.');
+    }
+    if(typeof password!=='string'||password.length<8){
+      throw new Error(language==='ky'?'Сырсөз кеминде 8 белгиден турушу керек.':'Пароль должен содержать не менее 8 символов.');
+    }
+    if(!['ru','ky'].includes(language)) throw new Error('Unsupported profile language.');
     const { data, error } = await c.auth.signUp({
-      email, password,
-      options: { data: { display_name: displayName, preferred_language: language }, emailRedirectTo: `${location.origin}${location.pathname}` }
+      email:cleanEmail, password,
+      options: { data: { display_name: cleanName, preferred_language: language }, emailRedirectTo: location.origin + location.pathname }
     });
     if (error) throw error;
     session = data.session || null; authUser = data.user || null;
     if (session) {
-      try { await ensureProfile(); } catch (e) { throw new Error(`Аккаунт создан, но профиль не подготовлен: ${e.message}. Проверь миграцию профиля.`); }
+      try { await ensureProfile(); } catch (e) { throw new Error('Аккаунт создан, но профиль не подготовлен: '+e.message+'. Проверь миграцию профиля.'); }
     }
     return { emailConfirmationRequired: !data.session };
   }

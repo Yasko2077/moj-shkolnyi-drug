@@ -223,7 +223,50 @@ function newEvent(){if(!state.realAdmin){toast('Создание меропри�
 
 function newPoll(){if(!state.realAdmin)return;const body='<div class="notice gold">Неофициальный опрос мнения. Не спрашивай персональные или чувствительные сведения.</div><form id="pollForm" class="field-grid"><div class="field full"><label>Вопрос</label><input name="title" minlength="5" maxlength="120" required></div><div class="field full"><label>Пояснение</label><textarea name="description" maxlength="500"></textarea></div><div class="field full"><label>Вариант 1</label><input name="option1" maxlength="100" required></div><div class="field full"><label>Вариант 2</label><input name="option2" maxlength="100" required></div><div class="field full"><label>Вариант 3 (необязательно)</label><input name="option3" maxlength="100"></div><div class="field full"><label>Вариант 4 (необязательно)</label><input name="option4" maxlength="100"></div><div class="field"><label>Дата завершения</label><input name="closesAt" type="date"></div><div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit">Создать опрос</button></div></form>';modal('Создать опрос мнения',body);}
 function newNews(){if(!state.realAdmin)return;modal('Добавить новость',`<form id="newsForm" class="field-grid"><div class="field full"><label>Заголовок</label><input name="title" maxlength="110" required></div><div class="field full"><label>Текст</label><textarea name="text" minlength="15" maxlength="900" required></textarea></div><div class="field"><label>Категория</label><select name="category"><option>Объявление</option><option>Возможности</option><option>Образование</option><option>Платформа</option></select></div><div class="field"><label>Дата</label><input name="date" type="date" value="${new Date().toISOString().slice(0,10)}" required></div><div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit">Опубликовать в демо</button></div></form>`);}
-function loginModal(){modal('Войти или создать аккаунт',`${window.YntymakCloud?.configured()?'<p class="card-sub">Используй собственную электронную почту. После регистрации может потребоваться подтверждение адреса из письма. Обычный аккаунт не получает полномочий администратора.</p>':'<div class="notice gold">Supabase ещё не настроен в этой копии. Сейчас можно тестировать только локальные сценарии. Подключение почты и облачной авторизации выполняется отдельно.</div>'}<form id="loginForm" class="field-grid" style="margin-top:14px"><div class="field full"><label>Email</label><input name="email" type="email" autocomplete="email" required></div><div class="field full"><label>Пароль</label><input name="password" type="password" minlength="8" autocomplete="current-password" required></div><div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit" ${window.YntymakCloud?.configured()?'':'disabled'}>Войти</button></div></form><div class="section-row"><h2>Новый аккаунт</h2></div><form id="signupForm" class="field-grid"><div class="field full"><label>Имя для отображения</label><input name="displayName" maxlength="70" required></div><div class="field full"><label>Email</label><input name="email" type="email" autocomplete="email" required></div><div class="field full"><label>Пароль (минимум 8 символов)</label><input name="password" type="password" minlength="8" autocomplete="new-password" required></div><div class="field full"><label class="lang-hint"><input type="checkbox" name="privacyAck" required> Я понимаю, что сейчас это пилотный прототип, и не буду вводить чувствительные данные.</label></div><div class="field full form-actions"><button class="btn" type="submit" ${window.YntymakCloud?.configured()?'':'disabled'}>Зарегистрироваться и отправить письмо</button></div></form><p class="lang-hint">Администраторские права назначаются отдельно единственной учётной записи владельцем Supabase-проекта.</p>`);}
+function loginModal(){
+ const tx=state.lang==='KG'?{
+  title:'Кирүү же аккаунт түзүү',loginHeading:'Аккаунтка кирүү',signupHeading:'Жаңы аккаунт',
+  info:'Өзүңдүн электрондук почтаңды колдон. Катталгандан кийин даректи кат аркылуу ырастоо талап кылынышы мүмкүн. Кадимки аккаунт администратор укуктарын албайт.',
+  localOnly:'Бул көчүрмөдө Supabase азырынча жөндөлө элек. Азыр жергиликтүү демо-сценарийлерди гана текшерүүгө болот.',
+  emailLabel:'Электрондук почта',passwordLabel:'Сырсөз',displayNameLabel:'Көрсөтүлүүчү ысым',
+  passwordHelp:'Сырсөз кеминде 8 белгиден турушу керек.',
+  signupNameHelp:'Көрсөтүлүүчү ысым боштуктарды алып салгандан кийин 2ден 70ке чейин белги болушу керек.',
+  privacyAck:'Бул пилоттук прототип экенин түшүнөм жана купуя маалыматтарды киргизбейм.',
+  cancel:'Жокко чыгаруу',login:'Кирүү',signup:'Катталып, кат жөнөтүү',
+  adminNote:'Администратор укуктарын Supabase долбоорунун ээси өзүнчө дайындайт.'
+ }:{
+  title:'Войти или создать аккаунт',loginHeading:'Вход в аккаунт',signupHeading:'Новый аккаунт',
+  info:'Используй собственную электронную почту. После регистрации может потребоваться подтверждение адреса из письма. Обычный аккаунт не получает полномочий администратора.',
+  localOnly:'Supabase ещё не настроен в этой копии. Сейчас можно тестировать только локальные сценарии.',
+  emailLabel:'Электронная почта',passwordLabel:'Пароль',displayNameLabel:'Имя для отображения',
+  passwordHelp:'Пароль должен содержать не менее 8 символов.',
+  signupNameHelp:'От 2 до 70 символов после удаления пробелов по краям.',
+  privacyAck:'Я понимаю, что сейчас это пилотный прототип, и не буду вводить чувствительные данные.',
+  cancel:'Отмена',login:'Войти',signup:'Зарегистрироваться и отправить письмо',
+  adminNote:'Администраторские права назначаются отдельно владельцем Supabase-проекта.'
+ };
+ const configured=Boolean(window.YntymakCloud?.configured());
+ const info=configured
+  ? '<p class="card-sub">'+tx.info+'</p>'
+  : '<div class="notice gold">'+tx.localOnly+'</div>';
+ modal(tx.title,info+
+  '<form id="loginForm" class="field-grid" aria-labelledby="loginFormTitle" style="margin-top:14px">'+
+   '<div class="field full"><div class="card-title" id="loginFormTitle">'+tx.loginHeading+'</div></div>'+
+   '<div class="field full"><label for="loginEmail">'+tx.emailLabel+'</label><input id="loginEmail" name="email" type="email" autocomplete="email" required></div>'+
+   '<div class="field full"><label for="loginPassword">'+tx.passwordLabel+'</label><input id="loginPassword" name="password" type="password" minlength="8" autocomplete="current-password" aria-describedby="loginPasswordHelp" required><small id="loginPasswordHelp">'+tx.passwordHelp+'</small></div>'+
+   '<div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>'+tx.cancel+'</button><button class="btn" type="submit" '+(configured?'':'disabled')+'>'+tx.login+'</button></div>'+
+  '</form>'+
+  '<div class="section-row"><h2 id="signupFormTitle">'+tx.signupHeading+'</h2></div>'+
+  '<form id="signupForm" class="field-grid" aria-labelledby="signupFormTitle">'+
+   '<div class="field full"><label for="signupDisplayName">'+tx.displayNameLabel+'</label><input id="signupDisplayName" name="displayName" minlength="2" maxlength="70" aria-describedby="signupNameHelp" autocomplete="nickname" required><small id="signupNameHelp">'+tx.signupNameHelp+'</small></div>'+
+   '<div class="field full"><label for="signupEmail">'+tx.emailLabel+'</label><input id="signupEmail" name="email" type="email" autocomplete="email" required></div>'+
+   '<div class="field full"><label for="signupPassword">'+tx.passwordLabel+'</label><input id="signupPassword" name="password" type="password" minlength="8" autocomplete="new-password" aria-describedby="signupPasswordHelp" required><small id="signupPasswordHelp">'+tx.passwordHelp+'</small></div>'+
+   '<div class="field full"><label for="signupPrivacyAck" class="lang-hint"><input id="signupPrivacyAck" type="checkbox" name="privacyAck" required> '+tx.privacyAck+'</label></div>'+
+   '<div class="field full form-actions"><button class="btn" type="submit" '+(configured?'':'disabled')+'>'+tx.signup+'</button></div>'+
+  '</form><p class="lang-hint">'+tx.adminNote+'</p>');
+ const nameField=$('#signupDisplayName');
+ nameField?.addEventListener('input',()=>nameField.setCustomValidity(''));
+}
 function viewElection(id){const e=db.elections.find(x=>x.id===id);if(!e)return;const approved=e.candidates.filter(c=>c.status==='approved');const mine=e.myVote;modal(e.title,`<div class="card-topline">${tag(scopeLabel(e.scope),'blue')}${tag(statusName(e.stage),'gold')}</div><p class="card-sub">${esc(e.description)}</p><div class="meta-line">${esc(e.target)} · ${esc(e.position)}</div><div class="metric-line"><span>Период голосования</span><strong>${dateLabel(e.votingStart)} — ${dateLabel(e.votingEnd)}</strong></div><div class="section-row"><h2>Кандидаты</h2>${e.stage==='nominations'?btn('Подать бесплатную заявку','data-nominate="'+esc(e.id)+'"','btn-small'):''}</div>${approved.map(c=>`<div class="admin-record"><span class="user-avatar">${esc(initials(c.name))}</span><div class="admin-record-copy"><strong>${esc(c.name)}</strong><small>${esc(c.program)}</small></div>${e.stage==='voting'&&!mine?btn('Голосовать','data-cast-vote="'+esc(e.id)+'" data-candidate="'+esc(c.id)+'"','btn-small'):''}</div>`).join('')||'<div class="empty-state">Кандидаты ещё не прошли допуск.</div>'}${mine?'<div class="notice">В этом браузере уже сохранён тестовый голос.</div>':''}<div class="notice gold" style="margin-top:13px">Это локальный тест. Он не гарантирует тайну голоса, уникальность личности или официальную проверку результата. Для настоящего голосования нужна отдельная серверная система.</div>${e.stage==='closed'?`<div class="section-row"><h2>Результаты демо</h2></div>${approved.map(c=>`<div class="metric-line"><span>${esc(c.name)}</span><strong>${c.votes||0}</strong></div>`).join('')}`:''}`);}
 function nominate(id){
  const e=db.elections.find(x=>x.id===id);if(!e||e.stage!=='nominations')return;
@@ -373,7 +416,40 @@ document.addEventListener('submit',async e=>{
  if(f.id==='pollForm'){e.preventDefault();if(!state.realAdmin)return;const d=new FormData(f),options=[d.get('option1'),d.get('option2'),d.get('option3'),d.get('option4')].map(x=>String(x||'').trim()).filter(Boolean);if(options.length<2||new Set(options.map(x=>x.toLocaleLowerCase())).size!==options.length){toast('Нужно 2–4 неповторяющихся варианта.');return;}const payload={title:String(d.get('title')).trim(),description:String(d.get('description')||'').trim(),options,closesAt:d.get('closesAt')?new Date(d.get('closesAt')+'T23:59:00').toISOString():null};if(window.YntymakCloud?.contentEnabled()&&window.YntymakCloud?.getSession()){try{await window.YntymakCloud.createPoll(payload);db.surveys=await window.YntymakCloud.listPolls();closeModal();go('surveys');toast('Опрос создан в облаке.');}catch(err){toast(err.message||'Не удалось создать опрос.');}return;}db.surveys.unshift({id:'SV-'+Date.now(),title:payload.title,description:payload.description,options:options,votes:options.map(()=>0),myChoice:null,status:'open',source:'local'});persist();addAudit('Создан демонстрационный опрос: '+payload.title);closeModal();go('surveys');toast('Опрос создан только в локальном демо.');}
  if(f.id==='newsForm'){e.preventDefault();if(!state.realAdmin)return;const d=new FormData(f),payload={title:d.get('title').trim(),text:d.get('text').trim(),category:d.get('category')};if(window.YntymakCloud?.contentEnabled()&&window.YntymakCloud?.getSession()){try{await window.YntymakCloud.createNews(payload);db.news=await window.YntymakCloud.listNews();closeModal();go('news');toast('Новость опубликована в облаке.');}catch(err){toast(err.message||'Не удалось опубликовать новость.');}return;}db.news.unshift({id:'N-'+Date.now(),...payload,date:d.get('date')});persist();addAudit(`Опубликована новость: ${payload.title}`);closeModal();go('news');toast('Новость добавлена только в локальный тест.');}
  if(f.id==='loginForm'){e.preventDefault();const d=new FormData(f);try{const result=await window.YntymakCloud.signIn({email:d.get('email').trim(),password:d.get('password')});state.admin=result.isAdmin;state.realAdmin=result.isAdmin;try{await loadCloudProfile();}catch(profileError){console.warn('Cloud profile could not be loaded:',profileError.message);}closeModal();render();toast(result.isAdmin?'Вход выполнен. Подтверждены права единственного администратора.':'Вход выполнен. Добро пожаловать!');}catch(err){toast(err.message||'Не удалось войти.');}}
- if(f.id==='signupForm'){e.preventDefault();const d=new FormData(f);if(!window.YntymakCloud?.configured()){toast('Сначала настрой Supabase Auth.');return;}try{const result=await window.YntymakCloud.signUp({email:d.get('email').trim(),password:d.get('password'),displayName:d.get('displayName').trim(),language:langCode()});if(window.YntymakCloud?.getSession()){try{await loadCloudProfile();}catch(profileError){console.warn('Cloud profile could not be loaded:',profileError.message);}}closeModal();toast(result.emailConfirmationRequired?'Письмо отправлено. Подтверди адрес, затем войди в аккаунт.':'Аккаунт создан. Профиль подготовлен.');}catch(err){toast(err.message||'Не удалось зарегистрироваться.');}}
+ if(f.id==='signupForm'){
+  e.preventDefault();
+  const d=new FormData(f);
+  const displayName=String(d.get('displayName')||'').trim();
+  const nameField=$('#signupDisplayName');
+  if(displayName.length<2||displayName.length>70){
+   nameField.setCustomValidity(state.lang==='KG'?'Көрсөтүлүүчү ысым 2ден 70ке чейин белгиден турушу керек.':'Имя должно содержать от 2 до 70 символов после удаления пробелов по краям.');
+   nameField.reportValidity();
+   return;
+  }
+  nameField.setCustomValidity('');
+  if(!window.YntymakCloud?.configured()){
+   toast(state.lang==='KG'?'Алгач Supabase Auth жөндө.':'Сначала настрой Supabase Auth.');
+   return;
+  }
+  try{
+   const result=await window.YntymakCloud.signUp({
+    email:String(d.get('email')||'').trim(),
+    password:d.get('password'),
+    displayName,
+    language:langCode()
+   });
+   if(window.YntymakCloud?.getSession()){
+    try{await loadCloudProfile();}
+    catch(profileError){console.warn('Cloud profile could not be loaded:',profileError.message);}
+   }
+   closeModal();
+   toast(result.emailConfirmationRequired
+    ?(state.lang==='KG'?'Кат ырастоо үчүн жөнөтүлдү. Андан кийин аккаунтка кир.':'Письмо отправлено. Подтверди адрес, затем войди в аккаунт.')
+    :(state.lang==='KG'?'Аккаунт түзүлдү. Профиль даяр.':'Аккаунт создан. Профиль подготовлен.'));
+  }catch(err){
+   toast(err.message||(state.lang==='KG'?'Катталуу мүмкүн болгон жок.':'Не удалось зарегистрироваться.'));
+  }
+ }
 });
 window.addEventListener('yntymak:auth-change', event => {
  const userId=event.detail?.userId||null;
