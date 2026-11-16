@@ -197,6 +197,8 @@ check(app.includes('name="name" minlength="2" maxlength="70"') &&
   'Profile form must validate a trimmed 2–70 character display name before local or cloud persistence.');
 check(app.includes("const langCode=()=>state.lang==='KG'?'ky':'ru';"),
   'Kyrgyz locale must map to the Supabase language code ky.');
+check(app.includes("toLocaleDateString(state.lang==='KG'?'ky-KG':'ru-RU'"),
+  'Visible dates must follow the selected Kyrgyz or Russian interface locale.');
 check(app.includes('function activateAccountStore()') && app.includes('localStorage.setItem(activeStore,JSON.stringify(db))'),
   'Browser demo data must be stored in an account-specific local namespace.');
 const authStateHandler = cloud.slice(
