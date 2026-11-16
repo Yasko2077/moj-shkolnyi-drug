@@ -236,6 +236,26 @@ check(authChangeHandler.includes('activateAccountStore();') &&
   authChangeHandler.includes('await window.YntymakCloud.checkAdmin()') &&
   authChangeHandler.includes('await loadCloudProfile()'),
   'Auth identity changes must switch local storage first, clear stale privileges, and reload the new account profile.');
+const loadCloudProfileBody = app.slice(
+  app.indexOf('async function loadCloudProfile()'),
+  app.indexOf('\nfunction profile()', app.indexOf('async function loadCloudProfile()'))
+);
+const profileRequest = loadCloudProfileBody.indexOf('const p=await window.YntymakCloud.getMyProfile();');
+const profileSuccessGuard = loadCloudProfileBody.indexOf(
+  'if(window.YntymakCloud?.getSession()?.user?.id!==requestedUserId)return false;',
+  profileRequest
+);
+const profileWrite = loadCloudProfileBody.indexOf('db.profile={...db.profile,name:p.displayName', profileRequest);
+const profileCatch = loadCloudProfileBody.indexOf('}catch(err){');
+const profileErrorGuard = loadCloudProfileBody.indexOf(
+  'if(window.YntymakCloud?.getSession()?.user?.id!==requestedUserId)return false;',
+  profileCatch
+);
+const profileErrorWrite = loadCloudProfileBody.indexOf("db.profile={...db.profile,name:'Участник'", profileCatch);
+check(loadCloudProfileBody.includes('const requestedUserId=session?.user?.id;') &&
+  profileRequest >= 0 && profileSuccessGuard > profileRequest && profileSuccessGuard < profileWrite &&
+  profileCatch > profileWrite && profileErrorGuard > profileCatch && profileErrorWrite > profileErrorGuard,
+  'A delayed cloud-profile response or error must be ignored after the authenticated user changes.');
 check(app.includes('readonly disabled'),
   'Cloud-verified school and district fields must be read-only in the UI.');
 check(app.includes("kicker:'ЖЕКЕ КАБИНЕТИҢ'") && app.includes("kicker:'ТВОЯ УЧЁТНАЯ ЗАПИСЬ'"),
