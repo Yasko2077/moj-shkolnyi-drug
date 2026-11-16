@@ -191,6 +191,10 @@ check(cloud.includes('async function getMyProfile()') && cloud.includes('async f
   'Cloud profile read/update methods are missing.');
 check(app.includes('async function loadCloudProfile()'),
   'App must load the authenticated cloud profile.');
+check(app.includes('name="name" minlength="2" maxlength="70"') &&
+  app.includes("displayName=String(d.get('name')||'').trim()") &&
+  app.includes('if(displayName.length<2||displayName.length>70)'),
+  'Profile form must validate a trimmed 2–70 character display name before local or cloud persistence.');
 check(app.includes("const langCode=()=>state.lang==='KG'?'ky':'ru';"),
   'Kyrgyz locale must map to the Supabase language code ky.');
 check(app.includes('function activateAccountStore()') && app.includes('localStorage.setItem(activeStore,JSON.stringify(db))'),
