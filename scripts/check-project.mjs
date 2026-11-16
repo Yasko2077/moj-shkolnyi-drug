@@ -26,6 +26,7 @@ for (const path of ['app.js', 'cloud.js', 'supabase-config.js']) {
 }
 
 const config = read('supabase-config.js');
+const html = read('index.html');
 const styles = read('styles.css');
 check(styles.includes(':is(a,button,input,select,textarea,[tabindex]):focus-visible'),
   'Keyboard focus indicators must be visible for interactive elements.');
@@ -176,6 +177,13 @@ check(!profilePatch.includes('grant update(school_id'),
 
 const cloud = read('cloud.js');
 const app = read('app.js');
+const toastRegion = html.match(/<div id="toastRegion"[^>]*>/)?.[0] || '';
+check(/role="status"/.test(toastRegion) &&
+  /aria-live="polite"/.test(toastRegion) &&
+  /aria-atomic="true"/.test(toastRegion),
+  'Toast region must announce each complete notification as a polite status update.');
+check(app.includes("function toast(s){const el=document.createElement('div');el.className='toast';el.textContent=s;$('#toastRegion').append(el);"),
+  'Toast messages must be inserted as text inside the accessible status region.');
 check(cloud.includes('p_organizer_access_consent:organizerAccessConsent') &&
   cloud.includes('organizerAccessConsent!==true'),
   'Cloud client must require event-specific organizer-access consent.');
