@@ -14,7 +14,7 @@ const TXT = {
   KG:{home:'Башкы бет',ideas:'Сунуштар',elections:'Шайлоолор',projects:'Долбоорлор жана командалар',events:'Иш-чаралар',surveys:'Пикир сурамжылоолору',news:'Жаңылыктар жана ресурстар',assistant:'ЖИ жардамчысы',profile:'Менин профилим',help:'Жардам жана коопсуздук',admin:'Башкаруу',login:'Кирүү / катталуу',logout:'Чыгуу'}
 };
 const now = new Date();
-const dateLabel = d => new Date(`${d}T12:00:00`).toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'});
+const dateLabel = d => new Date(`${d}T12:00:00`).toLocaleDateString(state.lang==='KG'?'ky-KG':'ru-RU',{day:'numeric',month:'short',year:'numeric'});
 const seed = {
   profile:{name:'Тестовый участник',school:'Школа № 12 (вымышленный пример)',district:'lenin',grade:'9 класс',about:'Интересуюсь школьными проектами, волонтёрством и командной работой.',interests:['Проекты','Экология'],verified:false},
   ideas:[
