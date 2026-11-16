@@ -26,6 +26,13 @@ for (const path of ['app.js', 'cloud.js', 'supabase-config.js']) {
 }
 
 const config = read('supabase-config.js');
+const styles = read('styles.css');
+check(styles.includes(':is(a,button,input,select,textarea,[tabindex]):focus-visible'),
+  'Keyboard focus indicators must be visible for interactive elements.');
+check(/@media\s*\(prefers-reduced-motion:\s*reduce\)/.test(styles) &&
+  styles.includes('transition-duration:.01ms!important') &&
+  styles.includes('animation-duration:.01ms!important'),
+  'Reduced-motion preferences must disable non-essential motion.');
 check(/supabasePublishableKey:\s*"sb_publishable_[^"]+"/.test(config),
   'A Supabase publishable key must be configured for the connected project.');
 const browserConfigValues = [...config.matchAll(/:\s*"([^"]*)"/g)].map(([, value]) => value).join('\n');
