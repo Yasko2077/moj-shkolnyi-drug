@@ -361,6 +361,24 @@ check(matrix.includes('20261115_elections_foundation.sql'),
 check(matrix.includes('Квитанция не содержит'),
   'Security matrix must include the voter/ballot separation check.');
 
+for (const [formId, fieldIds] of [
+  ['ideaForm', ['ideaTitle','ideaDescription','ideaCategory','ideaScope','ideaTarget']],
+  ['projectForm', ['projectTitle','projectDescription','projectCategory','projectScope','projectTarget','projectFirstTask']]
+]) {
+  const formStart = app.indexOf('<form id="'+formId+'"');
+  const formEnd = formStart >= 0 ? app.indexOf('</form>', formStart) : -1;
+  const formMarkup = formStart >= 0 && formEnd > formStart ? app.slice(formStart, formEnd) : '';
+  check(Boolean(formMarkup), 'Student form markup must exist: '+formId);
+  check(formMarkup.includes('aria-labelledby="modalTitle"'),
+    'Student form must have an accessible name: '+formId);
+  for (const fieldId of fieldIds) {
+    check(formMarkup.includes('for="'+fieldId+'"') && formMarkup.includes('id="'+fieldId+'"'),
+      'Student form label must be associated with its control: '+fieldId);
+  }
+}
+
+
+
 if (errors.length) {
   for (const error of errors) console.error(`FAIL: ${error}`);
   console.error(`${errors.length} check(s) failed.`);
