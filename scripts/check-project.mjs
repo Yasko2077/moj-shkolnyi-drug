@@ -379,6 +379,25 @@ for (const [formId, fieldIds] of [
 
 
 
+const registrationStart = app.indexOf('function registerEvent(id){');
+const registrationEnd = app.indexOf('\nasync function adminRoster', registrationStart);
+const registrationBody = registrationStart >= 0 && registrationEnd > registrationStart
+  ? app.slice(registrationStart, registrationEnd)
+  : '';
+check(Boolean(registrationBody), 'Event registration handler must exist.');
+check((registrationBody.match(/<form id="registrationForm"/g) || []).length === 2 &&
+  (registrationBody.match(/aria-labelledby="modalTitle"/g) || []).length === 2,
+  'Cloud and local event-registration forms must both have accessible names.');
+for (const fieldId of ['registrationName','registrationSchool','registrationGrade']) {
+  check(registrationBody.includes('for="'+fieldId+'"') &&
+    registrationBody.includes('id="'+fieldId+'"'),
+    'Local event-registration label must be associated with its control: '+fieldId);
+}
+check(registrationBody.includes('<label class="lang-hint"><input type="checkbox" name="organizerAccessConsent" required>'),
+  'Cloud event-registration consent checkbox must remain associated with its label.');
+
+
+
 if (errors.length) {
   for (const error of errors) console.error(`FAIL: ${error}`);
   console.error(`${errors.length} check(s) failed.`);
