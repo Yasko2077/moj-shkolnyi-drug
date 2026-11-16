@@ -396,6 +396,16 @@ for (const fieldId of ['registrationName','registrationSchool','registrationGrad
 check(registrationBody.includes('<label class="lang-hint"><input type="checkbox" name="organizerAccessConsent" required>'),
   'Cloud event-registration consent checkbox must remain associated with its label.');
 
+const surveyStart = app.indexOf('function surveys(){');
+const surveyEnd = app.indexOf('function news(){', surveyStart);
+const surveyMarkup = surveyStart >= 0 && surveyEnd > surveyStart
+  ? app.slice(surveyStart, surveyEnd)
+  : '';
+check(Boolean(surveyMarkup) &&
+  surveyMarkup.includes('<div class="bar" aria-hidden="true">') &&
+  surveyMarkup.includes('<span>${esc(o)}</span><strong>${pct}%</strong>'),
+  'Survey result bars must be hidden from assistive technology while option labels and percentages remain readable text.');
+
 
 
 if (errors.length) {
