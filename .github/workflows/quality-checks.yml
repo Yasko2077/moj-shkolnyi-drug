@@ -38,3 +38,5 @@ jobs:
         run: node scripts/check-auth-chat-isolation.mjs
       - name: Verify cloud module isolation across account changes
         run: node scripts/check-auth-module-bootstrap.mjs
+      - name: Verify cross-tab auth synchronization with synthetic sessions
+        run: node scripts/check-auth-cross-tab-sync.mjs
