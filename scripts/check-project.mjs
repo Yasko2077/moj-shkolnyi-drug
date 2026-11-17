@@ -177,6 +177,23 @@ check(!profilePatch.includes('grant update(school_id'),
 
 const cloud = read('cloud.js');
 const app = read('app.js');
+
+check(app.includes('function resetAccountScopedAssistantState(){') &&
+  app.includes('chatSessionRevision++') &&
+  app.includes("state.chat=[]") &&
+  app.includes("state.pendingQuestion=''") &&
+  app.includes("state.aiConsent=false") &&
+  app.includes("state.busy=false"),
+  'Account changes must clear assistant history, pending consent, and request state.');
+const assistantStart=app.indexOf('async function sendChat(');
+const assistantEnd=app.indexOf('\nfunction addAudit',assistantStart);
+const assistantSource=assistantStart>=0&&assistantEnd>assistantStart?app.slice(assistantStart,assistantEnd):'';
+check(assistantSource.includes('const requestRevision=chatSessionRevision') &&
+  assistantSource.includes('if(requestRevision!==chatSessionRevision)return;'),
+  'Late assistant responses must not update a newer account chat.');
+check(app.includes("resetAccountScopedAssistantState();\n state.admin=false;"),
+  'Auth changes must reset account-scoped assistant state before rendering the new account.');
+
 const toastRegion = html.match(/<div id="toastRegion"[^>]*>/)?.[0] || '';
 check(/role="status"/.test(toastRegion) &&
   /aria-live="polite"/.test(toastRegion) &&
