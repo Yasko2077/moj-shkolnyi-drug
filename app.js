@@ -85,6 +85,15 @@ const statusName = s => STATUS_LABELS[state.lang]?.[s] || STATUS_LABELS.RU[s] ||
 const pageNames={home:'home',ideas:'ideas',elections:'elections',projects:'projects',events:'events',surveys:'surveys',news:'news',assistant:'assistant',profile:'profile',help:'help',admin:'admin'};
 function activateAccountStore(){const userId=window.YntymakCloud?.getSession()?.user?.id;const nextStore=userId?`${STORE}:account:${userId}`:STORE;if(nextStore!==activeStore){activeStore=nextStore;db=readLocalStore(activeStore);}}
 function persist(){try{localStorage.setItem(activeStore,JSON.stringify(db));}catch{toast('Не удалось сохранить тестовые данные в этом браузере.');}}
+function eventRegistrationErrorMessage(error,language){
+ const code=String(error?.message||'').trim();
+ const messages={"not_authenticated":{"RU":"Сессия завершилась. Войди снова.","KG":"Сеанс аяктады. Кайра кир."},"organizer_access_consent_required":{"RU":"Подтверди согласие на передачу минимальных данных организатору этого мероприятия.","KG":"Бул иш-чаранын уюштуруучусуна минималдуу маалыматтарды берүүгө макулдугуңду ыраста."},"event_not_open":{"RU":"Регистрация на это мероприятие закрыта.","KG":"Бул иш-чарага катталуу жабылган."},"event_expired":{"RU":"Дата мероприятия уже прошла.","KG":"Иш-чаранын күнү өтүп кетти."},"profile_required_for_event_registration":{"RU":"Сначала укажи имя в профиле (от 2 до 70 символов).","KG":"Адегенде профилиңе атыңды жаз (2ден 70 белгиге чейин)."},"profile_school_not_active":{"RU":"Школа в профиле сейчас не подтверждена или неактивна. Обратись к уполномоченному представителю.","KG":"Профилиңдеги мектеп ырасталган эмес же активдүү эмес. Ыйгарым укуктуу өкүлгө кайрыл."},"school_event_requires_verified_school_scope":{"RU":"Для регистрации на школьное мероприятие требуется подтверждённая школа в профиле.","KG":"Мектептеги иш-чарага катталуу үчүн профилиңдеги мектеп ырасталышы керек."},"event_requires_verified_school_in_district":{"RU":"Это районное мероприятие доступно только участникам с подтверждённой школой в этом районе.","KG":"Бул райондук иш-чарага ушул райондогу мектеби ырасталган катышуучулар гана каттала алышат."},"invalid_event_scope":{"RU":"Для этого мероприятия сейчас недоступна регистрация. Обратись к организатору.","KG":"Бул иш-чарага азыр катталуу мүмкүн эмес. Уюштуруучуга кайрыл."},"already_registered":{"RU":"Ты уже зарегистрирован(а) на это мероприятие.","KG":"Сен бул иш-чарага катталгансың."},"event_capacity_reached":{"RU":"Свободные места закончились.","KG":"Бош орундар калбады."}};
+ const localized=messages[code];
+ if(localized)return localized[language==='KG'?'KG':'RU'];
+ return language==='KG'
+  ?'Катталуу мүмкүн болгон жок. Интернет байланышын текшерип, кайра аракет кыл.'
+  :'Не удалось зарегистрироваться. Проверь подключение и попробуй ещё раз.';
+}
 function toast(s){const el=document.createElement('div');el.className='toast';el.textContent=s;$('#toastRegion').append(el);setTimeout(()=>el.remove(),4200);}
 function heading(kicker,title,desc,action=''){return `<div class="page-heading"><div><div class="eyebrow">${esc(kicker)}</div><h1>${esc(title)}</h1><p>${esc(desc)}</p></div>${action?`<div class="heading-actions">${action}</div>`:''}</div>`;}
 function tag(s,cls=''){return `<span class="tag ${cls}">${esc(s)}</span>`;}
@@ -547,7 +556,7 @@ document.addEventListener('submit',async e=>{
     }catch(err){
      if(accountChanged()){notifyAccountChanged();return;}
      unlockRegistration();
-     toast(err.message||'Не удалось зарегистрироваться.');
+     toast(eventRegistrationErrorMessage(err,state.lang));
      return;
     }
     if(accountChanged()){notifyAccountChanged();return;}

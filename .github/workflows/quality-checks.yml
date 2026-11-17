@@ -42,3 +42,5 @@ jobs:
         run: node scripts/check-auth-cross-tab-sync.mjs
       - name: Verify event registration session isolation with synthetic accounts
         run: node scripts/check-event-registration-session.mjs
+      - name: Verify localized event registration errors
+        run: node scripts/check-event-registration-errors.mjs
