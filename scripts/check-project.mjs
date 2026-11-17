@@ -264,6 +264,10 @@ check(shellUpdate.includes("$('#environmentLabel').textContent=state.realAdmin?t
   'Environment warning and connection mode must use the currently selected RU/KY dictionary.');
 check(shellUpdate.includes("$('#languageBtn').setAttribute('aria-label',t('switchLanguage'))"),
   'Language switch accessible name must follow the selected RU/KY interface language.');
+check(html.includes('<html lang="ru">'),
+  'The document must declare Russian as its initial language.');
+check(shellUpdate.includes("document.documentElement.lang=state.lang==='KG'?'ky':'ru'"),
+  'Document language must follow the selected RU/KY interface language for assistive technologies.');
 const modalFocusHandler=app.slice(
   app.indexOf("$('#modalRoot').addEventListener('keydown'"),
   app.indexOf("$('#pageContent').addEventListener('input'")
