@@ -541,6 +541,25 @@ for (const fieldId of ['registrationName','registrationSchool','registrationGrad
 check(registrationBody.includes('<label class="lang-hint"><input type="checkbox" name="organizerAccessConsent" required>'),
   'Cloud event-registration consent checkbox must remain associated with its label.');
 
+const registrationSubmitStart = app.indexOf("if(f.id==='registrationForm'){", app.indexOf("document.addEventListener('submit'"));
+const registrationSubmitEnd = app.indexOf("\n if(f.id==='profileForm')", registrationSubmitStart);
+const registrationSubmitBody = registrationSubmitStart >= 0 && registrationSubmitEnd > registrationSubmitStart
+  ? app.slice(registrationSubmitStart, registrationSubmitEnd)
+  : '';
+check(Boolean(registrationSubmitBody), 'Event registration submit handler must exist.');
+check(registrationSubmitBody.includes("if(f.dataset.submitting==='true')return;") &&
+  registrationSubmitBody.includes("f.setAttribute('aria-busy','true')") &&
+  registrationSubmitBody.includes("submitButton.disabled=true") &&
+  registrationSubmitBody.includes("submitButton.disabled=false") &&
+  registrationSubmitBody.includes("f.removeAttribute('aria-busy')") &&
+  registrationSubmitBody.includes("unlockRegistration();"),
+  'Event registration must ignore duplicate in-flight submits, announce busy state, and unlock after recoverable errors.');
+const registrationRpcIndex = registrationSubmitBody.indexOf('await window.YntymakCloud.registerForEvent');
+const registrationCloseIndex = registrationSubmitBody.indexOf('if(registrationFormWasOpen)closeModal()', registrationRpcIndex);
+const registrationRefreshIndex = registrationSubmitBody.indexOf('db.events=await window.YntymakCloud.listEvents()', registrationRpcIndex);
+check(registrationRpcIndex >= 0 && registrationCloseIndex > registrationRpcIndex &&
+  registrationRefreshIndex > registrationCloseIndex,
+  'After a successful registration RPC, close the submitted form before refreshing the event list to avoid retrying a saved registration.');
 const surveyStart = app.indexOf('function surveys(){');
 const surveyEnd = app.indexOf('function news(){', surveyStart);
 const surveyMarkup = surveyStart >= 0 && surveyEnd > surveyStart
