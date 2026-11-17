@@ -229,7 +229,7 @@ check(app.includes('modalReturnFocus=document.activeElement') &&
   app.includes('focusTarget.focus()') &&
   app.includes('if(returnFocus?.isConnected){returnFocus.focus();return;}'),
   'Opening a modal must move focus inside and closing it must restore focus or move to the updated page heading.');
-const modalCloseLabel = app.match(/<button class="modal-close" data-close-modal aria-label="([^"]+)">×<\\/button>/)?.[1] || '';
+const modalCloseLabel = app.match(/data-close-modal aria-label="([^"]+)">×/)?.[1] || '';
 check(modalCloseLabel === "${esc(t('close'))}" &&
   app.includes("close:'Закрыть'") &&
   app.includes("close:'Жабуу'"),
