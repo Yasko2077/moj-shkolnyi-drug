@@ -134,7 +134,13 @@
   }
   async function updateMyProfile({displayName,gradeLabel,language='ru'}) {
     const c=getClient();
-    if(!c||!session?.user) throw new Error('Войди в аккаунт.');
+    const requestedUserId=session?.user?.id||null;
+    if(!c||!requestedUserId) throw new Error('Войди в аккаунт.');
+    const assertCurrentUser = () => {
+      if(session?.user?.id!==requestedUserId) {
+        throw new Error('Сессия изменилась во время сохранения профиля. Повтори запрос.');
+      }
+    };
     const cleanName=String(displayName||'').trim();
     const cleanGrade=String(gradeLabel||'').trim();
     if(cleanName.length<2||cleanName.length>70||cleanGrade.length>30||!['ru','ky'].includes(language)){
@@ -144,9 +150,11 @@
       display_name:cleanName,
       preferred_language:language,
       grade_label:cleanGrade||null
-    }).eq('id',session.user.id);
+    }).eq('id',requestedUserId);
+    assertCurrentUser();
     if(error) throw error;
     const saved=await getMyProfile();
+    assertCurrentUser();
     if(!saved) throw new Error('Профиль не найден. Повтори вход или обратись к проверяющему представителю.');
     return saved;
   }
