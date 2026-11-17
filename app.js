@@ -512,7 +512,62 @@ document.addEventListener('submit',async e=>{
  persist();closeModal();go('projects');toast('Проект создан только в этом браузере (демо).');
 }
  if(f.id==='candidateForm'){e.preventDefault();const d=new FormData(f),el=db.elections.find(x=>x.id===f.dataset.election);if(!el||el.stage!=='nominations')return;if(d.get('publicNameConsent')!=='on'||d.get('publicProgramConsent')!=='on'){toast('Нужно отдельно подтвердить публикацию имени и программы.');return;}el.candidates.push({id:'C-'+Date.now(),name:d.get('name').trim(),program:d.get('program').trim(),publicNameConsent:true,publicProgramConsent:true,publicConsentAt:new Date().toISOString(),status:'pending'});persist();closeModal();render();toast('Заявка кандидата отправлена на проверку. Подача бесплатная.');}
- if(f.id==='registrationForm'){e.preventDefault();const d=new FormData(f),el=db.events.find(x=>x.id===f.dataset.event);if(!el||el.registered>=el.capacity)return;if(el.source==='cloud'&&window.YntymakCloud?.eventsEnabled()&&window.YntymakCloud?.getSession()){try{await window.YntymakCloud.registerForEvent({eventId:el.id,organizerAccessConsent:d.get('organizerAccessConsent')==='on'});db.events=await window.YntymakCloud.listEvents();closeModal();render();toast('Регистрация сохранена. Данные профиля доступны только уполномоченному организатору этого события.');}catch(err){toast(err.message||'Не удалось зарегистрироваться.');}return;}if(db.registrations.some(x=>x.eventId===el.id&&x.owner==='local-profile')){toast('Ты уже зарегистрирован(а) на это событие.');return;}db.registrations.push({id:'REG-'+Date.now(),eventId:el.id,eventTitle:el.title,name:String(d.get('name')||'').trim(),school:String(d.get('school')||'').trim(),grade:String(d.get('grade')||'').trim(),owner:'local-profile',status:'Подтверждена в демо'});el.registered++;persist();closeModal();render();toast('Заявка зарегистрирована в локальном демо.');}
+ if(f.id==='registrationForm'){
+  e.preventDefault();
+  if(f.dataset.submitting==='true')return;
+  const submitButton=f.querySelector('button[type="submit"]');
+  const submitLabel=submitButton?.textContent||'';
+  f.dataset.submitting='true';
+  f.setAttribute('aria-busy','true');
+  if(submitButton){
+   submitButton.disabled=true;
+   submitButton.textContent=state.lang==='KG'?'Жөнөтүлүүдө…':'Отправка…';
+  }
+  const unlockRegistration=()=>{
+   if(!f.isConnected)return;
+   f.dataset.submitting='false';
+   f.removeAttribute('aria-busy');
+   if(submitButton){submitButton.disabled=false;submitButton.textContent=submitLabel;}
+  };
+  const d=new FormData(f),el=db.events.find(x=>x.id===f.dataset.event);
+  if(!el||el.registered>=el.capacity){
+   unlockRegistration();
+   toast('Регистрация закрыта или мест больше нет.');
+   return;
+  }
+  if(el.source==='cloud'&&window.YntymakCloud?.eventsEnabled()&&window.YntymakCloud?.getSession()){
+   try{
+    await window.YntymakCloud.registerForEvent({eventId:el.id,organizerAccessConsent:d.get('organizerAccessConsent')==='on'});
+   }catch(err){
+    unlockRegistration();
+    toast(err.message||'Не удалось зарегистрироваться.');
+    return;
+   }
+   const registrationFormWasOpen=f.isConnected;
+   if(registrationFormWasOpen)closeModal();
+   try{
+    db.events=await window.YntymakCloud.listEvents();
+    if(registrationFormWasOpen)render();
+    toast('Регистрация сохранена. Данные профиля доступны только уполномоченному организатору этого события.');
+   }catch(err){
+    toast(state.lang==='KG'
+     ?'Катталуу сакталды, бирок тизме жаңырган жок. Абалды текшерүү үчүн баракты жаңырт.'
+     :'Регистрация сохранена, но список не обновился. Обнови страницу, чтобы проверить статус.');
+   }
+   return;
+  }
+  if(db.registrations.some(x=>x.eventId===el.id&&x.owner==='local-profile')){
+   unlockRegistration();
+   toast('Ты уже зарегистрирован(а) на это событие.');
+   return;
+  }
+  db.registrations.push({id:'REG-'+Date.now(),eventId:el.id,eventTitle:el.title,name:String(d.get('name')||'').trim(),school:String(d.get('school')||'').trim(),grade:String(d.get('grade')||'').trim(),owner:'local-profile',status:'Подтверждена в демо'});
+  el.registered++;
+  persist();
+  closeModal();
+  render();
+  toast('Заявка зарегистрирована в локальном демо.');
+ }
  if(f.id==='profileForm'){e.preventDefault();const d=new FormData(f),displayName=String(d.get('name')||'').trim(),gradeLabel=String(d.get('grade')||'').trim(),about=String(d.get('about')||'').trim();if(displayName.length<2||displayName.length>70){toast(state.lang==='KG'?'Атың кеминде 2 белгиден турушу керек.':'Имя должно содержать от 2 до 70 символов.');return;}if(state.cloudProfile&&window.YntymakCloud?.getSession()){try{const saved=await window.YntymakCloud.updateMyProfile({displayName,gradeLabel,language:langCode()});db.profile={...db.profile,name:saved.displayName,school:saved.schoolName,district:saved.districtKey,grade:saved.gradeLabel,verified:Boolean(saved.schoolId),about,source:'cloud'};persist();render();toast('Имя и класс синхронизированы. Поле «О себе» осталось только в этом браузере.');}catch(err){toast(err.message||'Не удалось обновить облачный профиль.');}return;}db.profile={...db.profile,name:displayName,school:String(d.get('school')||'').trim(),district:String(d.get('district')||''),grade:gradeLabel,about};persist();render();toast('Демонстрационный профиль сохранён только в этом браузере.');}
  if(f.id==='chatForm'){e.preventDefault();const q=$('#chatInput').value.trim();await sendChat(q);}
  if(f.id==='surveyVoteForm'){e.preventDefault();const d=new FormData(f),poll=db.surveys.find(x=>x.id===f.dataset.survey),i=Number(d.get('choice'));if(!poll||poll.myChoice!==null||!Number.isInteger(i)||i<0||i>=poll.votes.length)return;if(poll.source==='cloud'&&window.YntymakCloud?.contentEnabled()){try{await window.YntymakCloud.castPollVote(poll.id,poll.optionIds[i]);db.surveys=await window.YntymakCloud.listPolls();closeModal();render();toast('Ответ принят.');}catch(err){toast(err.message||'Не удалось отправить ответ.');}return;}poll.votes[i]++;poll.myChoice=i;persist();closeModal();render();toast('Тестовый ответ учтён.');}
