@@ -368,6 +368,23 @@ for (const fieldId of ['candidateName','candidateProgram']) {
     nominationMarkup.includes('id="'+fieldId+'"'),
     'Nomination form label must be associated with its control: '+fieldId);
 }
+check(nominationMarkup.includes("const tx=state.lang==='KG'?{") &&
+  nominationMarkup.includes("title:'Талапкер болууга арыз'") &&
+  nominationMarkup.includes("nameLabel:'Көрсөтүлүүчү ысым'") &&
+  nominationMarkup.includes("programLabel:'Талапкердин программасы'"),
+  'Nomination form must provide Kyrgyz labels and title.');
+check(nominationMarkup.includes("title:'Заявка кандидата'") &&
+  nominationMarkup.includes("nameLabel:'Имя для отображения'") &&
+  nominationMarkup.includes("programLabel:'Программа кандидата'"),
+  'Nomination form must retain Russian labels and title.');
+check(nominationMarkup.includes('${tx.nameConsent}') &&
+  nominationMarkup.includes('${tx.programConsent}') &&
+  nominationMarkup.includes('name="publicNameConsent" required') &&
+  nominationMarkup.includes('name="publicProgramConsent" required'),
+  'Both separate publication consents must remain required in both languages.');
+check(nominationMarkup.includes('${tx.officialNote}') &&
+  nominationMarkup.includes('aria-labelledby="modalTitle"'),
+  'The localized nomination form must retain the demo-only notice and accessible name.');
 
 
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');

@@ -272,14 +272,37 @@ function loginModal(){
 function viewElection(id){const e=db.elections.find(x=>x.id===id);if(!e)return;const approved=e.candidates.filter(c=>c.status==='approved');const mine=e.myVote;modal(e.title,`<div class="card-topline">${tag(scopeLabel(e.scope),'blue')}${tag(statusName(e.stage),'gold')}</div><p class="card-sub">${esc(e.description)}</p><div class="meta-line">${esc(e.target)} · ${esc(e.position)}</div><div class="metric-line"><span>Период голосования</span><strong>${dateLabel(e.votingStart)} — ${dateLabel(e.votingEnd)}</strong></div><div class="section-row"><h2>Кандидаты</h2>${e.stage==='nominations'?btn('Подать бесплатную заявку','data-nominate="'+esc(e.id)+'"','btn-small'):''}</div>${approved.map(c=>`<div class="admin-record"><span class="user-avatar">${esc(initials(c.name))}</span><div class="admin-record-copy"><strong>${esc(c.name)}</strong><small>${esc(c.program)}</small></div>${e.stage==='voting'&&!mine?btn('Голосовать','data-cast-vote="'+esc(e.id)+'" data-candidate="'+esc(c.id)+'"','btn-small'):''}</div>`).join('')||'<div class="empty-state">Кандидаты ещё не прошли допуск.</div>'}${mine?'<div class="notice">В этом браузере уже сохранён тестовый голос.</div>':''}<div class="notice gold" style="margin-top:13px">Это локальный тест. Он не гарантирует тайну голоса, уникальность личности или официальную проверку результата. Для настоящего голосования нужна отдельная серверная система.</div>${e.stage==='closed'?`<div class="section-row"><h2>Результаты демо</h2></div>${approved.map(c=>`<div class="metric-line"><span>${esc(c.name)}</span><strong>${c.votes||0}</strong></div>`).join('')}`:''}`);}
 function nominate(id){
  const e=db.elections.find(x=>x.id===id);if(!e||e.stage!=='nominations')return;
- modal('Заявка кандидата',`<div class="notice gold" style="margin-bottom:12px">Подача заявки бесплатная. Кандидат должен соответствовать правилам выборов, которые утверждены для своей школы или ученического совета. Это демонстрационный сценарий: не используй реальные персональные данные.</div>
+ const tx=state.lang==='KG'?{
+  title:'Талапкер болууга арыз',
+  notice:'Арыз берүү акысыз. Талапкер өз мектеби же окуучулар кеңеши үчүн бекитилген шайлоо эрежелерине жооп бериши керек. Бул — окуу үчүн демо-сценарий: чыныгы жеке маалыматтарды колдонбо.',
+  nameLabel:'Көрсөтүлүүчү ысым',
+  programLabel:'Талапкердин программасы',
+  programPlaceholder:'Кандай 2–3 пайдалуу өзгөрүүнү сунуштайсың?',
+  nameConsent:'Бул окуу шайлоосунун катышуучуларына менин ысымымды көрсөтүүгө өзүнчө уруксат берем.',
+  programConsent:'Бул окуу шайлоосунун катышуучуларына менин программамды көрсөтүүгө өзүнчө уруксат берем.',
+  officialNote:'Чыныгы шайлоолор үчүн жарыялоо эрежелери жана өзүнчө макулдук алдын ала бекитилиши керек. Бул форма маалыматты ушул браузердеги демо-нускада гана сактайт.',
+  cancel:'Жокко чыгаруу',
+  submit:'Текшерүүгө жөнөтүү'
+ }:{
+  title:'Заявка кандидата',
+  notice:'Подача заявки бесплатная. Кандидат должен соответствовать правилам выборов, которые утверждены для своей школы или ученического совета. Это демонстрационный сценарий: не используй реальные персональные данные.',
+  nameLabel:'Имя для отображения',
+  programLabel:'Программа кандидата',
+  programPlaceholder:'Какие 2–3 полезных изменения ты предлагаешь?',
+  nameConsent:'Я отдельно разрешаю показать моё имя участникам этих учебных выборов.',
+  programConsent:'Я отдельно разрешаю показать мою программу участникам этих учебных выборов.',
+  officialNote:'В настоящих выборах нужны утверждённые правила публикации и отдельное согласие. Форма здесь сохраняется только в локальном демо.',
+  cancel:'Отмена',
+  submit:'Отправить на проверку'
+ };
+ modal(tx.title,`<div class="notice gold" style="margin-bottom:12px">${tx.notice}</div>
  <form id="candidateForm" data-election="${esc(id)}" class="field-grid" aria-labelledby="modalTitle">
- <div class="field full"><label for="candidateName">Имя для отображения</label><input id="candidateName" name="name" maxlength="70" value="${esc(db.profile.name)}" required></div>
- <div class="field full"><label for="candidateProgram">Программа кандидата</label><textarea id="candidateProgram" name="program" minlength="30" maxlength="800" placeholder="Какие 2–3 полезных изменения ты предлагаешь?" required></textarea></div>
- <div class="field full"><label class="lang-hint"><input type="checkbox" name="publicNameConsent" required> Я отдельно разрешаю показать моё имя участникам этих учебных выборов.</label></div>
- <div class="field full"><label class="lang-hint"><input type="checkbox" name="publicProgramConsent" required> Я отдельно разрешаю показать мою программу участникам этих учебных выборов.</label></div>
- <div class="field full"><small>В настоящих выборах нужны утверждённые правила публикации и отдельное согласие. Форма здесь сохраняется только в локальном демо.</small></div>
- <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>Отмена</button><button class="btn" type="submit">Отправить на проверку</button></div>
+ <div class="field full"><label for="candidateName">${tx.nameLabel}</label><input id="candidateName" name="name" maxlength="70" value="${esc(db.profile.name)}" required></div>
+ <div class="field full"><label for="candidateProgram">${tx.programLabel}</label><textarea id="candidateProgram" name="program" minlength="30" maxlength="800" placeholder="${tx.programPlaceholder}" required></textarea></div>
+ <div class="field full"><label class="lang-hint"><input type="checkbox" name="publicNameConsent" required> ${tx.nameConsent}</label></div>
+ <div class="field full"><label class="lang-hint"><input type="checkbox" name="publicProgramConsent" required> ${tx.programConsent}</label></div>
+ <div class="field full"><small>${tx.officialNote}</small></div>
+ <div class="field full form-actions"><button class="btn btn-outline" type="button" data-close-modal>${tx.cancel}</button><button class="btn" type="submit">${tx.submit}</button></div>
  </form>`);
 }
 function registerEvent(id){
