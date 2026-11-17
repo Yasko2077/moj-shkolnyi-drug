@@ -85,16 +85,45 @@
       throw new Error(language==='ky'?'Сырсөз кеминде 8 белгиден турушу керек.':'Пароль должен содержать не менее 8 символов.');
     }
     if(!['ru','ky'].includes(language)) throw new Error('Unsupported profile language.');
+    const revision = authStateRevision;
+    const initialUserId = session?.user?.id || null;
     const { data, error } = await c.auth.signUp({
       email:cleanEmail, password,
       options: { data: { display_name: cleanName, preferred_language: language }, emailRedirectTo: location.origin + location.pathname }
     });
     if (error) throw error;
-    session = data.session || null; authUser = data.user || null;
-    if (session) {
-      try { await ensureProfile(); } catch (e) { throw new Error('Аккаунт создан, но профиль не подготовлен: '+e.message+'. Проверь миграцию профиля.'); }
+    const createdSession = data.session || null;
+    const createdUser = createdSession?.user || data.user || null;
+    const createdUserId = createdUser?.id || null;
+    const sessionChangedError = () => new Error(language === 'ky'
+      ? 'Катталуу учурунда сеанс өзгөрдү. Кайра аракет кыл.'
+      : 'Сессия изменилась во время регистрации. Повтори попытку.');
+    if (createdSession) {
+      if (!createdUserId || (data.user?.id && data.user.id !== createdUserId)) {
+        throw new Error('Не удалось подтвердить активную сессию. Повтори регистрацию.');
+      }
+      if (revision !== authStateRevision) {
+        if (session?.user?.id !== createdUserId) throw sessionChangedError();
+      } else {
+        if (initialUserId && initialUserId !== createdUserId) throw sessionChangedError();
+        const previousUserId = session?.user?.id || null;
+        session = createdSession;
+        authUser = createdUser;
+        if (previousUserId !== createdUserId) isAdmin = false;
+      }
+      const assertCurrentSession = () => {
+        if (session?.user?.id !== createdUserId) throw sessionChangedError();
+      };
+      assertCurrentSession();
+      try {
+        await ensureProfile();
+        assertCurrentSession();
+      } catch (e) {
+        assertCurrentSession();
+        throw new Error('Аккаунт создан, но профиль не подготовлен: '+e.message+'. Проверь миграцию профиля.');
+      }
     }
-    return { emailConfirmationRequired: !data.session };
+    return { emailConfirmationRequired: !createdSession };
   }
   async function signIn({ email, password }) {
     const c = getClient(); if (!c) throw new Error('Настрой Supabase в supabase-config.js.');
