@@ -191,6 +191,20 @@ const assistantSource=assistantStart>=0&&assistantEnd>assistantStart?app.slice(a
 check(assistantSource.includes('const requestRevision=chatSessionRevision') &&
   assistantSource.includes('if(requestRevision!==chatSessionRevision)return;'),
   'Late assistant responses must not update a newer account chat.');
+const assistantMarkupStart=app.indexOf('function assistant(){');
+const assistantMarkupEnd=app.indexOf('\nasync function loadCloudProfile()',assistantMarkupStart);
+const assistantMarkup=assistantMarkupStart>=0&&assistantMarkupEnd>assistantMarkupStart
+  ? app.slice(assistantMarkupStart,assistantMarkupEnd) : '';
+check(assistantMarkup.includes('aria-label="${chatFormLabel}"') &&
+  assistantMarkup.includes('aria-label="${chatInputLabel}"') &&
+  assistantMarkup.includes('placeholder="${chatInputPlaceholder}"') &&
+  assistantMarkup.includes('${chatSendLabel}') &&
+  assistantMarkup.includes("chatFormLabel=state.lang==='KG'?'Жардамчыга билдирүү жөнөтүү':'Форма отправки сообщения помощнику'") &&
+  assistantMarkup.includes("chatInputLabel=state.lang==='KG'?'Жардамчыга билдирүү':'Сообщение помощнику'") &&
+  assistantMarkup.includes("chatInputPlaceholder=state.lang==='KG'?'Жеке маалыматтарды кошпой, тапшырмаңды жаз…':'Опиши задачу без личных данных…'") &&
+  assistantMarkup.includes("chatSendLabel=state.lang==='KG'?'Жөнөтүү ↗':'Отправить ↗'"),
+  'Assistant chat form and input must expose localized accessible names, placeholder, and action in RU/KY.');
+
 check(app.includes("resetAccountScopedAssistantState();\n state.admin=false;"),
   'Auth changes must reset account-scoped assistant state before rendering the new account.');
 
