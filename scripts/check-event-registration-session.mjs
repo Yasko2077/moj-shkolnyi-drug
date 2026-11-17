@@ -119,7 +119,7 @@ async function verifySessionReplacementDuringRefresh() {
   await pending;
   check(harness.listCalls === 1 && harness.db.events[0].id === 'EV-SYNTHETIC',
     'A list response from a replaced session object must not overwrite current account state, even if the user ID is unchanged.');
-  check(harness.messages.some(message => message.includes('сменился аккаунт')),
+  check(harness.messages.some(message => message.includes('изменился сеанс')),
     'A session replacement during list refresh must produce the safe account-change notice.');
 }
 
