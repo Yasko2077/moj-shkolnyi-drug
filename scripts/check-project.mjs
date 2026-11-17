@@ -234,6 +234,27 @@ check(modalCloseLabel === "${esc(t('close'))}" &&
   app.includes("close:'Закрыть'") &&
   app.includes("close:'Жабуу'"),
   'Modal close buttons must expose the active Russian or Kyrgyz accessible name.');
+const shellDictionaryChecks = [
+  "environmentAdmin:'АККАУНТ АДМИНИСТРАТОРА ПРОВЕРЕН · ДЕМО-ДАННЫЕ ЛОКАЛЬНЫЕ'",
+  "environmentDemo:'ПРОТОТИП · ТОЛЬКО ВЫМЫШЛЕННЫЕ ДАННЫЕ'",
+  "modeAdmin:'Администратор · локальный тест'",
+  "modeConnected:'Supabase Auth подключён'",
+  "modeDemo:'Демо-режим'",
+  "environmentAdmin:'АДМИНИСТРАТОРДУН АККАУНТУ ТЕКШЕРИЛДИ · ЖЕРГИЛИКТҮҮ ДЕМО МААЛЫМАТТАРЫ'",
+  "environmentDemo:'ПРОТОТИП · ОЙДОН ЧЫГАРЫЛГАН ТЕСТ МААЛЫМАТТАРЫ ГАНА'",
+  "modeAdmin:'Администратор · жергиликтүү сыноо'",
+  "modeConnected:'Supabase Auth туташтырылды'",
+  "modeDemo:'Демо режими'"
+];
+for (const entry of shellDictionaryChecks) {
+  check(app.includes(entry), 'RU/KY shell status translation is missing: ' + entry);
+}
+const shellUpdateStart=app.indexOf('function updateShell(){');
+const shellUpdateEnd=app.indexOf('function home(){',shellUpdateStart);
+const shellUpdate=shellUpdateStart>=0&&shellUpdateEnd>shellUpdateStart?app.slice(shellUpdateStart,shellUpdateEnd):'';
+check(shellUpdate.includes("$('#environmentLabel').textContent=state.realAdmin?t('environmentAdmin'):t('environmentDemo')") &&
+  shellUpdate.includes("$('#modeLabel').textContent=state.realAdmin?t('modeAdmin'):window.YntymakCloud?.configured()?t('modeConnected'):t('modeDemo')"),
+  'Environment warning and connection mode must use the currently selected RU/KY dictionary.');
 const modalFocusHandler=app.slice(
   app.indexOf("$('#modalRoot').addEventListener('keydown'"),
   app.indexOf("$('#pageContent').addEventListener('input'")
