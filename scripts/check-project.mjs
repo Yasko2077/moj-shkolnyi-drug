@@ -234,6 +234,13 @@ check(modalCloseLabel === "${esc(t('close'))}" &&
   app.includes("close:'Закрыть'") &&
   app.includes("close:'Жабуу'"),
   'Modal close buttons must expose the active Russian or Kyrgyz accessible name.');
+const languageSwitchLabels = [
+  "switchLanguage:'Переключить язык интерфейса на кыргызский'",
+  "switchLanguage:'Интерфейстин тилин орусчага которуу'"
+];
+for (const entry of languageSwitchLabels) {
+  check(app.includes(entry), 'RU/KY language switch accessible name is missing: ' + entry);
+}
 const shellDictionaryChecks = [
   "environmentAdmin:'АККАУНТ АДМИНИСТРАТОРА ПРОВЕРЕН · ДЕМО-ДАННЫЕ ЛОКАЛЬНЫЕ'",
   "environmentDemo:'ПРОТОТИП · ТОЛЬКО ВЫМЫШЛЕННЫЕ ДАННЫЕ'",
@@ -255,6 +262,8 @@ const shellUpdate=shellUpdateStart>=0&&shellUpdateEnd>shellUpdateStart?app.slice
 check(shellUpdate.includes("$('#environmentLabel').textContent=state.realAdmin?t('environmentAdmin'):t('environmentDemo')") &&
   shellUpdate.includes("$('#modeLabel').textContent=state.realAdmin?t('modeAdmin'):window.YntymakCloud?.configured()?t('modeConnected'):t('modeDemo')"),
   'Environment warning and connection mode must use the currently selected RU/KY dictionary.');
+check(shellUpdate.includes("$('#languageBtn').setAttribute('aria-label',t('switchLanguage'))"),
+  'Language switch accessible name must follow the selected RU/KY interface language.');
 const modalFocusHandler=app.slice(
   app.indexOf("$('#modalRoot').addEventListener('keydown'"),
   app.indexOf("$('#pageContent').addEventListener('input'")
