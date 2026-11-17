@@ -225,6 +225,43 @@ function closeModal(){
   if(fallback){if(!fallback.hasAttribute('tabindex'))fallback.setAttribute('tabindex','-1');fallback.focus();}
  });
 }
+async function loadCloudModulesForSession(requestedUserId){
+ const cloud=window.YntymakCloud;
+ const isCurrent=()=>Boolean(requestedUserId)&&cloud?.getSession()?.user?.id===requestedUserId;
+ if(!isCurrent())return false;
+ const collections=[
+  ['initiativesEnabled','listInitiatives','ideas','Cloud initiatives unavailable:'],
+  ['projectsEnabled','listProjects','projects','Cloud projects unavailable:'],
+  ['eventsEnabled','listEvents','events','Cloud events unavailable:']
+ ];
+ for(const [enabled,method,target,label] of collections){
+  if(!isCurrent())return false;
+  if(!cloud[enabled]())continue;
+  try{
+   const value=await cloud[method]();
+   if(!isCurrent())return false;
+   db[target]=value;
+  }catch(error){
+   if(!isCurrent())return false;
+   console.warn(label,error.message);
+  }
+ }
+ if(!isCurrent())return false;
+ if(cloud.contentEnabled()){
+  try{
+   const news=await cloud.listNews();
+   if(!isCurrent())return false;
+   db.news=news;
+   const polls=await cloud.listPolls();
+   if(!isCurrent())return false;
+   db.surveys=polls;
+  }catch(error){
+   if(!isCurrent())return false;
+   console.warn('Cloud content unavailable:',error.message);
+  }
+ }
+ return isCurrent();
+}
 function resetAccountScopedAssistantState(){
  chatSessionRevision++;
  state.chat=[];
@@ -534,6 +571,8 @@ window.addEventListener('yntymak:auth-change', event => {
    if(window.YntymakCloud?.getSession()?.user?.id!==userId)return;
    state.admin=isAdmin;state.realAdmin=isAdmin;
    await loadCloudProfile();
+   if(window.YntymakCloud?.getSession()?.user?.id!==userId)return;
+   await loadCloudModulesForSession(userId);
   }catch(err){console.warn('Auth state refresh:',err.message);}
   if(window.YntymakCloud?.getSession()?.user?.id===userId)render();
  });
@@ -567,21 +606,16 @@ $('#modalRoot').addEventListener('keydown',e=>{
 $('#pageContent').addEventListener('input',e=>{if(['ideaSearch','ideaScope','ideaStatus'].includes(e.target.id)){const q=($('#ideaSearch')?.value||'').toLowerCase(),scope=$('#ideaScope')?.value||'all',status=$('#ideaStatus')?.value||'all';$$('#ideaList .idea-card').forEach((el,i)=>{const item=db.ideas.filter(x=>x.status!=='review'||state.realAdmin)[i];el.hidden=!(item&&item.title.toLowerCase().includes(q)&&(scope==='all'||item.scope===scope)&&(status==='all'||item.status===status));});}});
 if(window.YntymakCloud?.configured()){
  window.YntymakCloud.init().then(async result=>{
+  const requestedUserId=result.session?.user?.id||null;
+  const isCurrentSession=()=>(window.YntymakCloud?.getSession()?.user?.id||null)===requestedUserId;
+  if(!isCurrentSession())return;
   state.admin=!!result.isAdmin;state.realAdmin=!!result.isAdmin;
-   if(result.session){try{await loadCloudProfile();}catch(e){console.warn('Cloud profile could not be loaded:',e.message);}}
-  if(window.YntymakCloud.initiativesEnabled() && result.session){
-   try{db.ideas=await window.YntymakCloud.listInitiatives();}catch(e){console.warn('Cloud initiatives unavailable:',e.message);}
+  if(requestedUserId){
+   try{await loadCloudProfile();}catch(e){console.warn('Cloud profile could not be loaded:',e.message);}
+   if(!isCurrentSession())return;
+   await loadCloudModulesForSession(requestedUserId);
   }
-  if(window.YntymakCloud.projectsEnabled() && result.session){
-   try{db.projects=await window.YntymakCloud.listProjects();}catch(e){console.warn('Cloud projects unavailable:',e.message);}
-  }
-  if(window.YntymakCloud.eventsEnabled() && result.session){
-   try{db.events=await window.YntymakCloud.listEvents();}catch(e){console.warn('Cloud events unavailable:',e.message);}
-  }
-  if(window.YntymakCloud.contentEnabled() && result.session){
-   try{db.news=await window.YntymakCloud.listNews();db.surveys=await window.YntymakCloud.listPolls();}catch(e){console.warn('Cloud content unavailable:',e.message);}
-  }
-  render();
+  if(isCurrentSession())render();
  }).catch(e=>console.warn('Supabase initialization:',e.message));
 }
 render();

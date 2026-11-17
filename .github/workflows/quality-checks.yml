@@ -36,3 +36,5 @@ jobs:
         run: node scripts/check-auth-signup-race.mjs
       - name: Verify assistant state isolation across account changes
         run: node scripts/check-auth-chat-isolation.mjs
+      - name: Verify cloud module isolation across account changes
+        run: node scripts/check-auth-module-bootstrap.mjs

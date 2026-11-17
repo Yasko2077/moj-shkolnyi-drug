@@ -194,6 +194,27 @@ check(assistantSource.includes('const requestRevision=chatSessionRevision') &&
 check(app.includes("resetAccountScopedAssistantState();\n state.admin=false;"),
   'Auth changes must reset account-scoped assistant state before rendering the new account.');
 
+const moduleLoaderStart=app.indexOf('async function loadCloudModulesForSession(requestedUserId){');
+const moduleLoaderEnd=app.indexOf('function resetAccountScopedAssistantState()',moduleLoaderStart);
+const moduleLoader=moduleLoaderStart>=0&&moduleLoaderEnd>moduleLoaderStart?app.slice(moduleLoaderStart,moduleLoaderEnd):'';
+check(moduleLoader.includes('const isCurrent=()=>Boolean(requestedUserId)&&cloud?.getSession()?.user?.id===requestedUserId;') &&
+  (moduleLoader.match(/if\(!isCurrent\(\)\)return false;/g)||[]).length>=5 &&
+  moduleLoader.includes('if(!isCurrent())return false;\n   db.news=news;') &&
+  moduleLoader.includes('if(!isCurrent())return false;\n   db.surveys=polls;'),
+  'Every cloud collection response must be checked against the initiating account before assignment.');
+const authChangeStart=app.indexOf("window.addEventListener('yntymak:auth-change'");
+const authChangeEnd=app.indexOf("$('#authButton')",authChangeStart);
+const authChangeSource=authChangeStart>=0&&authChangeEnd>authChangeStart?app.slice(authChangeStart,authChangeEnd):'';
+check(authChangeSource.includes('await loadCloudModulesForSession(userId);'),
+  'Account changes must reload cloud collections under the newly active session.');
+const cloudInitStart=app.indexOf('if(window.YntymakCloud?.configured()){');
+const cloudInitEnd=app.indexOf('\nrender();',cloudInitStart);
+const cloudInitSource=cloudInitStart>=0&&cloudInitEnd>cloudInitStart?app.slice(cloudInitStart,cloudInitEnd):'';
+check(cloudInitSource.includes('const requestedUserId=result.session?.user?.id||null;') &&
+  cloudInitSource.includes('if(!isCurrentSession())return;') &&
+  cloudInitSource.includes('await loadCloudModulesForSession(requestedUserId);'),
+  'Initial cloud bootstrap must reject a stale session before setting roles or loading modules.');
+
 const toastRegion = html.match(/<div id="toastRegion"[^>]*>/)?.[0] || '';
 check(/role="status"/.test(toastRegion) &&
   /aria-live="polite"/.test(toastRegion) &&
