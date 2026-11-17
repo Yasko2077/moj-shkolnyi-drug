@@ -2,6 +2,7 @@
 (() => {
   const cfg = window.YNTYMAK_CONFIG || {};
   let client = null, session = null, authUser = null, isAdmin = false;
+  let authStateRevision = 0, authInitializing = false;
   const configured = () => Boolean(cfg.supabaseUrl && cfg.supabasePublishableKey && window.supabase?.createClient);
   function getClient() {
     if (!configured()) return null;
@@ -13,10 +14,14 @@
   async function refresh() {
     const c = getClient();
     if (!c) { session = null; authUser = null; isAdmin = false; return null; }
+    const revision = authStateRevision;
     const { data, error } = await c.auth.getSession();
+    if (revision !== authStateRevision) return session;
     if (error) throw error;
+    const previousUserId = session?.user?.id || null;
     session = data.session || null;
     authUser = session?.user || null;
+    if (previousUserId !== (session?.user?.id || null) || !session) isAdmin = false;
     return session;
   }
   async function ensureProfile() {
@@ -44,19 +49,24 @@
   async function init() {
     const c = getClient();
     if (!c) return { configured: false, session: null, isAdmin: false };
-    await refresh();
+    authInitializing = true;
     c.auth.onAuthStateChange((_event, next) => {
+      authStateRevision++;
       const previousUserId = session?.user?.id || null;
       session = next || null; authUser = session?.user || null;
       const nextUserId = session?.user?.id || null;
       if (previousUserId !== nextUserId) {
         isAdmin = false;
-        window.dispatchEvent(new CustomEvent('yntymak:auth-change', {
-          detail: { userId: nextUserId }
-        }));
+        if (!authInitializing) {
+          window.dispatchEvent(new CustomEvent('yntymak:auth-change', {
+            detail: { userId: nextUserId }
+          }));
+        }
       }
       if (!session) isAdmin = false;
     });
+    try { await refresh(); }
+    finally { authInitializing = false; }
     if (session) {
       try { await ensureProfile(); } catch (e) { console.warn('Profile bootstrap needs migration/configuration:', e.message); }
       try { await checkAdmin(); } catch (e) { console.warn('Admin check failed:', e.message); }

@@ -570,6 +570,102 @@ try {
 }
 
 
+
+const authInitStart = cloud.indexOf('async function init()');
+const authSubscribeIndex = cloud.indexOf('c.auth.onAuthStateChange', authInitStart);
+const authRefreshIndex = cloud.indexOf('try { await refresh(); }', authInitStart);
+const authRevisionGuardIndex = cloud.indexOf('if (revision !== authStateRevision) return session;');
+const authRefreshErrorIndex = cloud.indexOf('if (error) throw error;', cloud.indexOf('async function refresh()'));
+check(authSubscribeIndex >= 0 && authRefreshIndex > authSubscribeIndex &&
+  authRevisionGuardIndex >= 0 && authRevisionGuardIndex < authRefreshErrorIndex &&
+  cloud.includes('let authStateRevision = 0, authInitializing = false;'),
+  'Auth changes must be observed before the initial session read, and stale session reads/errors must not overwrite newer auth events.');
+
+async function verifyInitSessionRace({eventType,eventUser,staleUser,staleError=false,expectedUser,label}) {
+  let authChangeListener=null, resolveSession, markGetSessionStarted;
+  const getSessionStarted=new Promise(resolve=>{markGetSessionStarted=resolve;});
+  const sessions={
+    A:{user:{id:'synthetic-account-a',email:'a@example.invalid',user_metadata:{}}},
+    B:{user:{id:'synthetic-account-b',email:'b@example.invalid',user_metadata:{}}}
+  };
+  const eventSession=eventUser?sessions[eventUser]:null;
+  const staleSession=staleUser?sessions[staleUser]:null;
+  const expectedUserId=expectedUser?sessions[expectedUser].user.id:null;
+  let profileBootstrapCount=0,adminCheckCount=0,authChangeDispatchCount=0;
+  const client={
+    auth:{
+      getSession:()=>{
+        markGetSessionStarted();
+        return new Promise(resolve=>{resolveSession=resolve;});
+      },
+      onAuthStateChange:callback=>{
+        authChangeListener=callback;
+        return {data:{subscription:{unsubscribe(){}}}};
+      }
+    },
+    rpc:async name=>{
+      if(name==='create_my_profile')profileBootstrapCount++;
+      if(name==='is_verification_representative')adminCheckCount++;
+      return {data:false,error:null};
+    }
+  };
+  const testWindow={
+    YNTYMAK_CONFIG:{
+      supabaseUrl:'https://example.invalid',
+      supabasePublishableKey:'sb_publishable_synthetic_test'
+    },
+    supabase:{createClient:()=>client},
+    dispatchEvent:event=>{if(event?.type==='yntymak:auth-change')authChangeDispatchCount++;}
+  };
+  class TestCustomEvent {
+    constructor(type,options){this.type=type;this.detail=options?.detail;}
+  }
+  const context={window:testWindow,CustomEvent:TestCustomEvent,console:{warn(){},error(){},log(){}}};
+  new vm.Script(cloud,{filename:'cloud.js'}).runInNewContext(context);
+  const api=testWindow.YntymakCloud;
+  const initPromise=api.init();
+  await getSessionStarted;
+  if(typeof authChangeListener!=='function')throw new Error('Auth listener was not registered before getSession().');
+  authChangeListener(eventType,eventSession);
+  resolveSession(staleError
+    ? {data:null,error:new Error('stale synthetic getSession error')}
+    : {data:{session:staleSession},error:null});
+  const result=await initPromise;
+  const actualUserId=result.session?.user?.id||null;
+  check(actualUserId===expectedUserId &&
+    (api.getSession()?.user?.id||null)===expectedUserId &&
+    (api.getUser()?.id||null)===expectedUserId,
+    'A late getSession result must not replace the newer ' + label + '.');
+  check(profileBootstrapCount===(expectedUserId?1:0) &&
+    adminCheckCount===(expectedUserId?1:0),
+    'Initialization must bootstrap only the final session after ' + label + '.');
+  check(authChangeDispatchCount===0,
+    'Auth changes during initialization must not trigger a duplicate account bootstrap for ' + label + '.');
+  check(api.isAdmin()===false,
+    'Initialization must not retain stale administrator state after ' + label + '.');
+}
+
+try {
+  await verifyInitSessionRace({
+    eventType:'SIGNED_OUT',eventUser:null,staleUser:'A',expectedUser:null,
+    label:'sign-out event'
+  });
+  await verifyInitSessionRace({
+    eventType:'SIGNED_IN',eventUser:'B',staleUser:'A',expectedUser:'B',
+    label:'account B sign-in'
+  });
+  await verifyInitSessionRace({
+    eventType:'INITIAL_SESSION',eventUser:'A',staleUser:null,expectedUser:'A',
+    label:'initial session event'
+  });
+  await verifyInitSessionRace({
+    eventType:'SIGNED_IN',eventUser:'B',staleError:true,expectedUser:'B',
+    label:'account B sign-in with a stale getSession error'
+  });
+} catch(error) {
+  check(false,'Synthetic auth initialization race test failed: '+error.message);
+}
+
 const profileReadStart = cloud.indexOf('async function getMyProfile()');
 const profileReadEnd = cloud.indexOf('  async function updateMyProfile(', profileReadStart);
 const profileReadBody = profileReadStart >= 0 && profileReadEnd > profileReadStart
