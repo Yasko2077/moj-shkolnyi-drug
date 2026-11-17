@@ -479,6 +479,96 @@ check(Boolean(newsCategoryMarkup) &&
   app.includes("newsCategoryLabel(n.category||'Объявление')"),
   'News categories must be localized without changing stored values or unknown categories.');
 
+
+const adminCheckStart = cloud.indexOf('async function checkAdmin()');
+const adminCheckEnd = cloud.indexOf('  async function init()', adminCheckStart);
+const adminCheckBody = adminCheckStart >= 0 && adminCheckEnd > adminCheckStart
+  ? cloud.slice(adminCheckStart, adminCheckEnd)
+  : '';
+check(adminCheckBody.includes('const requestedUserId = session?.user?.id || null;') &&
+  adminCheckBody.includes('if (session?.user?.id !== requestedUserId) return false;') &&
+  adminCheckBody.indexOf('if (session?.user?.id !== requestedUserId) return false;') <
+    adminCheckBody.indexOf('if (error)'),
+  'Admin verification must ignore stale responses before mutating the current account privilege state.');
+
+async function verifyAdminCheckRace(lateResponse, currentResponse, expectedAdmin) {
+  let authChangeListener = null;
+  let resolveFirstStarted;
+  let resolveSecondStarted;
+  const firstStarted = new Promise(resolve => { resolveFirstStarted = resolve; });
+  const secondStarted = new Promise(resolve => { resolveSecondStarted = resolve; });
+  const pendingAdminChecks = [];
+  const sessionA = { user: { id: 'synthetic-account-a', email: 'a@example.invalid', user_metadata: {} } };
+  const sessionB = { user: { id: 'synthetic-account-b', email: 'b@example.invalid', user_metadata: {} } };
+  const client = {
+    auth: {
+      getSession: async () => ({ data: { session: sessionA }, error: null }),
+      onAuthStateChange: callback => {
+        authChangeListener = callback;
+        return { data: { subscription: { unsubscribe() {} } } };
+      }
+    },
+    rpc: name => {
+      if (name === 'create_my_profile') return Promise.resolve({ data: true, error: null });
+      if (name === 'is_verification_representative') {
+        const index = pendingAdminChecks.length;
+        const pending = new Promise(resolve => pendingAdminChecks.push(resolve));
+        if (index === 0) resolveFirstStarted();
+        if (index === 1) resolveSecondStarted();
+        return pending;
+      }
+      return Promise.resolve({ data: null, error: null });
+    }
+  };
+  const testWindow = {
+    YNTYMAK_CONFIG: {
+      supabaseUrl: 'https://example.invalid',
+      supabasePublishableKey: 'sb_publishable_synthetic_test'
+    },
+    supabase: { createClient: () => client },
+    dispatchEvent() {}
+  };
+  class TestCustomEvent {
+    constructor(type, options) { this.type = type; this.detail = options?.detail; }
+  }
+  const context = {
+    window: testWindow,
+    CustomEvent: TestCustomEvent,
+    console: { warn() {}, error() {}, log() {} }
+  };
+  new vm.Script(cloud, { filename: 'cloud.js' }).runInNewContext(context);
+  const api = testWindow.YntymakCloud;
+  const initPromise = api.init();
+  await firstStarted;
+  if (typeof authChangeListener !== 'function') throw new Error('Auth listener was not registered.');
+  authChangeListener('SIGNED_IN', sessionB);
+  const currentCheckPromise = api.checkAdmin();
+  await secondStarted;
+  pendingAdminChecks[1](currentResponse);
+  const currentResult = await currentCheckPromise;
+  pendingAdminChecks[0](lateResponse);
+  const initResult = await initPromise;
+  check(currentResult === expectedAdmin &&
+    api.isAdmin() === expectedAdmin &&
+    initResult.isAdmin === expectedAdmin &&
+    initResult.session?.user?.id === 'synthetic-account-b',
+    'A delayed admin response from account A must not grant or revoke account B privileges.');
+}
+try {
+  await verifyAdminCheckRace(
+    { data: true, error: null },
+    { data: false, error: null },
+    false
+  );
+  await verifyAdminCheckRace(
+    { data: null, error: new Error('stale synthetic account error') },
+    { data: true, error: null },
+    true
+  );
+} catch (error) {
+  check(false, 'Synthetic admin-session race test failed: ' + error.message);
+}
+
 if (errors.length) {
   for (const error of errors) console.error(`FAIL: ${error}`);
   console.error(`${errors.length} check(s) failed.`);
