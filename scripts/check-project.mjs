@@ -305,14 +305,16 @@ check(app.includes("toLocaleDateString(state.lang==='KG'?'ky-KG':'ru-RU'") &&
   'Visible dates must use Kyrgyz locale data when supported and a language-neutral numeric fallback otherwise.');
 check(app.includes('function activateAccountStore()') && app.includes('localStorage.setItem(activeStore,JSON.stringify(db))'),
   'Browser demo data must be stored in an account-specific local namespace.');
-const authStateHandler = cloud.slice(
-  cloud.indexOf('c.auth.onAuthStateChange('),
-  cloud.indexOf('    if (session) {', cloud.indexOf('c.auth.onAuthStateChange('))
-);
+const authStateHandlerStart = cloud.indexOf('c.auth.onAuthStateChange(');
+const authStateHandlerEnd = cloud.indexOf('\n    });', authStateHandlerStart);
+const authStateHandler = authStateHandlerStart >= 0 && authStateHandlerEnd > authStateHandlerStart
+  ? cloud.slice(authStateHandlerStart, authStateHandlerEnd) : '';
 check(authStateHandler.includes('previousUserId !== nextUserId') &&
   authStateHandler.includes("new CustomEvent('yntymak:auth-change'") &&
+  authStateHandler.includes('authStateRevision++;') &&
+  authStateHandler.includes('if (!authInitializing)') &&
   !authStateHandler.includes('await '),
-  'Auth callback must notify identity changes without awaiting Supabase work.');
+  'Auth callback must notify post-initialization identity changes synchronously without awaiting Supabase work.');
 const authChangeHandler = app.slice(
   app.indexOf("window.addEventListener('yntymak:auth-change'"),
   app.indexOf("$('#authButton').addEventListener", app.indexOf("window.addEventListener('yntymak:auth-change'"))
