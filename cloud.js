@@ -106,8 +106,11 @@
   }
   async function signOut() {
     const c = getClient(); if (!c) return;
+    const revision = authStateRevision;
     const { error } = await c.auth.signOut(); if (error) throw error;
-    session = null; authUser = null; isAdmin = false;
+    if (revision === authStateRevision) {
+      session = null; authUser = null; isAdmin = false;
+    }
   }
   async function getMyProfile() {
     const c=getClient();

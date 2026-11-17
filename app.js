@@ -527,7 +527,15 @@ window.addEventListener('yntymak:auth-change', event => {
  });
 });
 $('#authButton').addEventListener('click',()=>{if(window.YntymakCloud?.getSession()){go('profile');toast('Аккаунт активен.');}else loginModal();});
-$('#signOutButton').addEventListener('click',async()=>{try{await window.YntymakCloud?.signOut();}catch(e){toast(e.message);return;}state.admin=false;state.realAdmin=false;state.cloudProfile=false;activateAccountStore();render();toast('Сессия завершена.');});
+$('#signOutButton').addEventListener('click',async()=>{
+ try{await window.YntymakCloud?.signOut();}
+ catch(e){toast(e.message);return;}
+ if(window.YntymakCloud?.getSession()){
+  toast(state.lang==='KG'?'Сеанс дагы эле активдүү.':'Сессия всё ещё активна.');
+  return;
+ }
+ toast(state.lang==='KG'?'Сеанс аяктады.':'Сессия завершена.');
+});
 $('#languageBtn').addEventListener('click',()=>{state.lang=state.lang==='RU'?'KG':'RU';render();});
 $('#mobileMenu').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
 document.addEventListener('click',e=>{const p=e.target.closest('[data-page]');if(p&&!$('#pageContent').contains(p))go(p.dataset.page);});

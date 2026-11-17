@@ -326,6 +326,26 @@ check(authChangeHandler.includes('activateAccountStore();') &&
   authChangeHandler.includes('await window.YntymakCloud.checkAdmin()') &&
   authChangeHandler.includes('await loadCloudProfile()'),
   'Auth identity changes must switch local storage first, clear stale privileges, and reload the new account profile.');
+const signOutHandlerStart = app.indexOf("$('#signOutButton').addEventListener");
+const signOutHandlerEnd = app.indexOf("$('#languageBtn').addEventListener", signOutHandlerStart);
+const signOutHandler = signOutHandlerStart >= 0 && signOutHandlerEnd > signOutHandlerStart
+  ? app.slice(signOutHandlerStart, signOutHandlerEnd) : '';
+check(signOutHandler.includes('if(window.YntymakCloud?.getSession())') &&
+  !signOutHandler.includes('state.admin=false') &&
+  !signOutHandler.includes('state.realAdmin=false') &&
+  !signOutHandler.includes('state.cloudProfile=false') &&
+  !signOutHandler.includes('activateAccountStore();') &&
+  signOutHandler.includes('Сессия всё ещё активна.') &&
+  signOutHandler.includes('Сеанс дагы эле активдүү.'),
+  'The sign-out button must not clear a newer session after the auth-change handler has switched accounts.');
+const signOutStart = cloud.indexOf('async function signOut()');
+const signOutEnd = cloud.indexOf('async function getMyProfile()', signOutStart);
+const signOutBody = signOutStart >= 0 && signOutEnd > signOutStart
+  ? cloud.slice(signOutStart, signOutEnd) : '';
+check(signOutBody.includes('const revision = authStateRevision;') &&
+  signOutBody.includes('if (revision === authStateRevision)') &&
+  signOutBody.indexOf('const revision = authStateRevision;') < signOutBody.indexOf('await c.auth.signOut()'),
+  'Cloud sign-out may clear local auth state only when no newer auth event arrived during the request.');
 const loadCloudProfileBody = app.slice(
   app.indexOf('async function loadCloudProfile()'),
   app.indexOf('\nfunction profile()', app.indexOf('async function loadCloudProfile()'))
@@ -666,6 +686,120 @@ try {
   });
 } catch(error) {
   check(false,'Synthetic auth initialization race test failed: '+error.message);
+}
+
+function createSignOutHarness(signOutAction) {
+  let authChangeListener = null;
+  const sessionA = { user: { id: 'synthetic-account-a', email: 'a@example.invalid', user_metadata: {} } };
+  const sessionB = { user: { id: 'synthetic-account-b', email: 'b@example.invalid', user_metadata: {} } };
+  const client = {
+    auth: {
+      getSession: async () => ({ data: { session: sessionA }, error: null }),
+      onAuthStateChange: callback => {
+        authChangeListener = callback;
+        return { data: { subscription: { unsubscribe() {} } } };
+      },
+      signOut: () => signOutAction({
+        emit: (event, nextSession) => authChangeListener(event, nextSession),
+        sessionA,
+        sessionB
+      })
+    },
+    rpc: async name => ({ data: name === 'is_verification_representative', error: null })
+  };
+  const testWindow = {
+    YNTYMAK_CONFIG: {
+      supabaseUrl: 'https://example.invalid',
+      supabasePublishableKey: 'sb_publishable_synthetic_test'
+    },
+    supabase: { createClient: () => client },
+    dispatchEvent() {}
+  };
+  class TestCustomEvent {
+    constructor(type, options) { this.type = type; this.detail = options?.detail; }
+  }
+  const context = {
+    window: testWindow,
+    CustomEvent: TestCustomEvent,
+    console: { warn() {}, error() {}, log() {} }
+  };
+  new vm.Script(cloud, { filename: 'cloud.js' }).runInNewContext(context);
+  return {
+    api: testWindow.YntymakCloud,
+    sessionA,
+    sessionB,
+    emitAuth: (event, nextSession) => {
+      if (typeof authChangeListener !== 'function') throw new Error('Auth listener was not registered.');
+      authChangeListener(event, nextSession);
+    }
+  };
+}
+
+async function verifySignOutRace() {
+  let resolveSignOut, markSignOutStarted;
+  const signOutStarted = new Promise(resolve => { markSignOutStarted = resolve; });
+  const harness = createSignOutHarness(() => {
+    markSignOutStarted();
+    return new Promise(resolve => { resolveSignOut = resolve; });
+  });
+  await harness.api.init();
+  check(harness.api.isAdmin() === true, 'Synthetic account A must begin with its verified test permission.');
+  const request = harness.api.signOut();
+  await signOutStarted;
+  harness.emitAuth('SIGNED_IN', harness.sessionB);
+  resolveSignOut({ error: null });
+  await request;
+  check(harness.api.getSession()?.user?.id === harness.sessionB.user.id &&
+    harness.api.getUser()?.id === harness.sessionB.user.id &&
+    harness.api.isAdmin() === false,
+    'A delayed sign-out completion for account A must not clear the newer account B session or retain A permissions.');
+  await harness.api.checkAdmin();
+  check(harness.api.getSession()?.user?.id === harness.sessionB.user.id &&
+    harness.api.isAdmin() === true,
+    'Account B must be able to complete its own permission check after A sign-out finishes.');
+}
+
+async function verifySignOutEventClearsState() {
+  const harness = createSignOutHarness(({ emit }) => {
+    emit('SIGNED_OUT', null);
+    return Promise.resolve({ error: null });
+  });
+  await harness.api.init();
+  await harness.api.signOut();
+  check(harness.api.getSession() === null && harness.api.getUser() === null &&
+    harness.api.isAdmin() === false,
+    'A normal SIGNED_OUT event must clear the session, user and administrator state.');
+}
+
+async function verifySignOutFallbackClearsState() {
+  const harness = createSignOutHarness(() => Promise.resolve({ error: null }));
+  await harness.api.init();
+  await harness.api.signOut();
+  check(harness.api.getSession() === null && harness.api.getUser() === null &&
+    harness.api.isAdmin() === false,
+    'A successful sign-out without an auth callback must still clear the unchanged local session.');
+}
+
+async function verifySignOutFailurePreservesState() {
+  const failure = new Error('synthetic sign-out failure');
+  const harness = createSignOutHarness(() => Promise.resolve({ error: failure }));
+  await harness.api.init();
+  const outcome = await harness.api.signOut().then(
+    () => ({ rejected: false }),
+    error => ({ rejected: error === failure })
+  );
+  check(outcome.rejected && harness.api.getSession()?.user?.id === harness.sessionA.user.id &&
+    harness.api.isAdmin() === true,
+    'A failed sign-out without an auth event must preserve the still-active account A state.');
+}
+
+try {
+  await verifySignOutRace();
+  await verifySignOutEventClearsState();
+  await verifySignOutFallbackClearsState();
+  await verifySignOutFailurePreservesState();
+} catch (error) {
+  check(false, 'Synthetic sign-out lifecycle test failed: ' + error.message);
 }
 
 const profileReadStart = cloud.indexOf('async function getMyProfile()');
