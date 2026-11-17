@@ -569,6 +569,88 @@ try {
   check(false, 'Synthetic admin-session race test failed: ' + error.message);
 }
 
+
+const profileReadStart = cloud.indexOf('async function getMyProfile()');
+const profileReadEnd = cloud.indexOf('  async function updateMyProfile(', profileReadStart);
+const profileReadBody = profileReadStart >= 0 && profileReadEnd > profileReadStart
+  ? cloud.slice(profileReadStart, profileReadEnd) : '';
+check(profileReadBody.includes('const requestedUserId=session?.user?.id||null;') &&
+  profileReadBody.includes(".eq('id',requestedUserId)") &&
+  profileReadBody.includes('const assertCurrentUser = () => {') &&
+  (profileReadBody.match(/assertCurrentUser\(\);/g) || []).length === 2,
+  'Cloud profile reads must capture the requested account and re-check it after each awaited query.');
+
+async function verifyProfileReadRace(stage, lateResponse) {
+  let authChangeListener = null, resolveProfile, resolveSchool, markProfileStarted, markSchoolStarted;
+  const profileStarted = new Promise(resolve => { markProfileStarted = resolve; });
+  const schoolStarted = new Promise(resolve => { markSchoolStarted = resolve; });
+  const sessionA = { user: { id: 'synthetic-account-a', email: 'a@example.invalid', user_metadata: {} } };
+  const sessionB = { user: { id: 'synthetic-account-b', email: 'b@example.invalid', user_metadata: {} } };
+  let schoolQueryCount = 0;
+  const client = {
+    auth: {
+      getSession: async () => ({ data: { session: sessionA }, error: null }),
+      onAuthStateChange: callback => { authChangeListener = callback; return { data: { subscription: { unsubscribe() {} } } }; }
+    },
+    rpc: async name => ({ data: name === 'is_verification_representative' ? false : true, error: null }),
+    from: table => ({
+      select: () => ({
+        eq: (_column, value) => ({
+          maybeSingle: () => {
+            if (table === 'profiles') {
+              if (value !== sessionA.user.id) throw new Error('Profile query was not bound to account A.');
+              markProfileStarted(); return new Promise(resolve => { resolveProfile = resolve; });
+            }
+            if (table === 'schools') {
+              schoolQueryCount++;
+              if (value !== 'synthetic-school-a') throw new Error('School lookup was not bound to account A.');
+              markSchoolStarted(); return new Promise(resolve => { resolveSchool = resolve; });
+            }
+            throw new Error('Unexpected table in synthetic profile test: ' + table);
+          }
+        })
+      })
+    })
+  };
+  const testWindow = {
+    YNTYMAK_CONFIG: { supabaseUrl: 'https://example.invalid', supabasePublishableKey: 'sb_publishable_synthetic_test' },
+    supabase: { createClient: () => client },
+    dispatchEvent() {}
+  };
+  class TestCustomEvent { constructor(type, options) { this.type = type; this.detail = options?.detail; } }
+  const context = { window: testWindow, CustomEvent: TestCustomEvent, console: { warn() {}, error() {}, log() {} } };
+  new vm.Script(cloud, { filename: 'cloud.js' }).runInNewContext(context);
+  const api = testWindow.YntymakCloud;
+  await api.init();
+  const request = api.getMyProfile();
+  await profileStarted;
+  if (stage === 'school') {
+    resolveProfile({ data: { display_name: 'Synthetic A', preferred_language: 'ru', school_id: 'synthetic-school-a', grade_label: '9' }, error: null });
+    await schoolStarted;
+  }
+  if (typeof authChangeListener !== 'function') throw new Error('Auth listener was not registered.');
+  authChangeListener('SIGNED_IN', sessionB);
+  if (stage === 'profile') {
+    resolveProfile({ data: { display_name: 'Synthetic A', preferred_language: 'ru', school_id: null, grade_label: '9' }, error: null });
+  } else if (stage === 'profile-error') {
+    resolveProfile({ data: null, error: new Error('stale synthetic profile error') });
+  } else {
+    resolveSchool(lateResponse);
+  }
+  const outcome = await request.then(() => ({ rejected: false, message: '' }), error => ({ rejected: true, message: error.message }));
+  check(outcome.rejected && outcome.message === 'Сессия изменилась во время загрузки профиля. Повтори запрос.',
+    'A stale ' + stage + ' response from account A must be rejected after switching to account B.');
+  check(schoolQueryCount === (stage === 'school' ? 1 : 0),
+    'A stale profile response must not trigger an unrelated school lookup.');
+}
+try {
+  await verifyProfileReadRace('profile', null);
+  await verifyProfileReadRace('profile-error', null);
+  await verifyProfileReadRace('school', { data: { name: 'Synthetic school A', district_key: 'lenin' }, error: null });
+} catch (error) {
+  check(false, 'Synthetic profile-session race test failed: ' + error.message);
+}
+
 if (errors.length) {
   for (const error of errors) console.error(`FAIL: ${error}`);
   console.error(`${errors.length} check(s) failed.`);

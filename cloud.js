@@ -101,16 +101,24 @@
   }
   async function getMyProfile() {
     const c=getClient();
-    if(!c||!session?.user) throw new Error('Войди в аккаунт.');
+    const requestedUserId=session?.user?.id||null;
+    if(!c||!requestedUserId) throw new Error('Войди в аккаунт.');
+    const assertCurrentUser = () => {
+      if(session?.user?.id!==requestedUserId) {
+        throw new Error('Сессия изменилась во время загрузки профиля. Повтори запрос.');
+      }
+    };
     const {data,error}=await c.from('profiles')
       .select('display_name,preferred_language,school_id,grade_label')
-      .eq('id',session.user.id).maybeSingle();
+      .eq('id',requestedUserId).maybeSingle();
+    assertCurrentUser();
     if(error) throw error;
     if(!data) return null;
     let schoolName='',districtKey='';
     if(data.school_id){
       const {data:school,error:schoolError}=await c.from('schools')
         .select('name,district_key').eq('id',data.school_id).maybeSingle();
+      assertCurrentUser();
       if(schoolError) throw schoolError;
       schoolName=school?.name||'';
       districtKey=school?.district_key||'';
