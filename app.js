@@ -273,9 +273,9 @@ function viewElection(id){const e=db.elections.find(x=>x.id===id);if(!e)return;c
 function nominate(id){
  const e=db.elections.find(x=>x.id===id);if(!e||e.stage!=='nominations')return;
  modal('Заявка кандидата',`<div class="notice gold" style="margin-bottom:12px">Подача заявки бесплатная. Кандидат должен соответствовать правилам выборов, которые утверждены для своей школы или ученического совета. Это демонстрационный сценарий: не используй реальные персональные данные.</div>
- <form id="candidateForm" data-election="${esc(id)}" class="field-grid">
- <div class="field full"><label>Имя для отображения</label><input name="name" maxlength="70" value="${esc(db.profile.name)}" required></div>
- <div class="field full"><label>Программа кандидата</label><textarea name="program" minlength="30" maxlength="800" placeholder="Какие 2–3 полезных изменения ты предлагаешь?" required></textarea></div>
+ <form id="candidateForm" data-election="${esc(id)}" class="field-grid" aria-labelledby="modalTitle">
+ <div class="field full"><label for="candidateName">Имя для отображения</label><input id="candidateName" name="name" maxlength="70" value="${esc(db.profile.name)}" required></div>
+ <div class="field full"><label for="candidateProgram">Программа кандидата</label><textarea id="candidateProgram" name="program" minlength="30" maxlength="800" placeholder="Какие 2–3 полезных изменения ты предлагаешь?" required></textarea></div>
  <div class="field full"><label class="lang-hint"><input type="checkbox" name="publicNameConsent" required> Я отдельно разрешаю показать моё имя участникам этих учебных выборов.</label></div>
  <div class="field full"><label class="lang-hint"><input type="checkbox" name="publicProgramConsent" required> Я отдельно разрешаю показать мою программу участникам этих учебных выборов.</label></div>
  <div class="field full"><small>В настоящих выборах нужны утверждённые правила публикации и отдельное согласие. Форма здесь сохраняется только в локальном демо.</small></div>

@@ -355,6 +355,21 @@ check(app.includes('name="publicNameConsent"') && app.includes('name="publicProg
 check(app.includes("d.get('publicNameConsent')!=='on'||d.get('publicProgramConsent')!=='on'"),
   'The nomination handler must enforce both publication consents.');
 
+const nominationStart = app.indexOf('function nominate(id){');
+const nominationEnd = app.indexOf('\nfunction registerEvent(id){', nominationStart);
+const nominationMarkup = nominationStart >= 0 && nominationEnd > nominationStart
+  ? app.slice(nominationStart, nominationEnd)
+  : '';
+check(Boolean(nominationMarkup) &&
+  nominationMarkup.includes('aria-labelledby="modalTitle"'),
+  'Nomination form must have an accessible name.');
+for (const fieldId of ['candidateName','candidateProgram']) {
+  check(nominationMarkup.includes('for="'+fieldId+'"') &&
+    nominationMarkup.includes('id="'+fieldId+'"'),
+    'Nomination form label must be associated with its control: '+fieldId);
+}
+
+
 const matrix = read('docs/SECURITY_TEST_MATRIX.md');
 check(matrix.includes('20261115_elections_foundation.sql'),
   'Security matrix must include the elections migration.');
