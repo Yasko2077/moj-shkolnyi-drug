@@ -651,6 +651,171 @@ try {
   check(false, 'Synthetic profile-session race test failed: ' + error.message);
 }
 
+
+const profileUpdateStart = cloud.indexOf('async function updateMyProfile(');
+const profileUpdateEnd = cloud.indexOf('  async function listActiveSchools()', profileUpdateStart);
+const profileUpdateBody = profileUpdateStart >= 0 && profileUpdateEnd > profileUpdateStart
+  ? cloud.slice(profileUpdateStart, profileUpdateEnd) : '';
+check(profileUpdateBody.includes('const requestedUserId=session?.user?.id||null;') &&
+  profileUpdateBody.includes(".eq('id',requestedUserId)") &&
+  profileUpdateBody.includes('const assertCurrentUser = () => {') &&
+  profileUpdateBody.split('assertCurrentUser();').length === 3 &&
+  profileUpdateBody.indexOf('assertCurrentUser();') < profileUpdateBody.indexOf('if(error)') &&
+  profileUpdateBody.lastIndexOf('assertCurrentUser();') > profileUpdateBody.indexOf('const saved=await getMyProfile();'),
+  'Cloud profile updates must remain bound to the initiating account and re-check the session after each awaited operation.');
+
+async function verifyProfileUpdateRace(lateResponse, label) {
+  let authChangeListener = null, resolveUpdate, markUpdateStarted;
+  const updateStarted = new Promise(resolve => { markUpdateStarted = resolve; });
+  const sessionA = { user: { id: 'synthetic-account-a', email: 'a@example.invalid', user_metadata: {} } };
+  const sessionB = { user: { id: 'synthetic-account-b', email: 'b@example.invalid', user_metadata: {} } };
+  let profileReadCount = 0, updateUserId = null;
+  const client = {
+    auth: {
+      getSession: async () => ({ data: { session: sessionA }, error: null }),
+      onAuthStateChange: callback => {
+        authChangeListener = callback;
+        return { data: { subscription: { unsubscribe() {} } } };
+      }
+    },
+    rpc: async name => ({ data: name === 'is_verification_representative' ? false : true, error: null }),
+    from: table => ({
+      update: payload => ({
+        eq: (_column, value) => {
+          if (table !== 'profiles' || payload.display_name !== 'Synthetic A') {
+            throw new Error('Unexpected synthetic profile update.');
+          }
+          updateUserId = value;
+          markUpdateStarted();
+          return new Promise(resolve => { resolveUpdate = resolve; });
+        }
+      }),
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => {
+            profileReadCount++;
+            return {
+              data: { display_name: 'Synthetic B', preferred_language: 'ru', school_id: null, grade_label: '9' },
+              error: null
+            };
+          }
+        })
+      })
+    })
+  };
+  const testWindow = {
+    YNTYMAK_CONFIG: {
+      supabaseUrl: 'https://example.invalid',
+      supabasePublishableKey: 'sb_publishable_synthetic_test'
+    },
+    supabase: { createClient: () => client },
+    dispatchEvent() {}
+  };
+  class TestCustomEvent {
+    constructor(type, options) { this.type = type; this.detail = options?.detail; }
+  }
+  const context = {
+    window: testWindow,
+    CustomEvent: TestCustomEvent,
+    console: { warn() {}, error() {}, log() {} }
+  };
+  new vm.Script(cloud, { filename: 'cloud.js' }).runInNewContext(context);
+  const api = testWindow.YntymakCloud;
+  await api.init();
+  const request = api.updateMyProfile({
+    displayName: 'Synthetic A',
+    gradeLabel: '9',
+    language: 'ru'
+  });
+  await updateStarted;
+  if (typeof authChangeListener !== 'function') throw new Error('Auth listener was not registered.');
+  authChangeListener('SIGNED_IN', sessionB);
+  resolveUpdate(lateResponse);
+  const outcome = await request.then(
+    value => ({ rejected: false, value }),
+    error => ({ rejected: true, message: error.message })
+  );
+  check(updateUserId === sessionA.user.id,
+    'A profile save must remain bound to account A when ' + label + ' arrives.');
+  check(outcome.rejected &&
+    outcome.message === 'Сессия изменилась во время сохранения профиля. Повтори запрос.',
+    'A late ' + label + ' after switching A → B must be rejected as a session change.');
+  check(profileReadCount === 0,
+    'A stale profile save must not start a profile refresh for the newly active account B.');
+}
+
+async function verifyProfileUpdateSuccess() {
+  const sessionA = { user: { id: 'synthetic-account-a', email: 'a@example.invalid', user_metadata: {} } };
+  let updateUserId = null, profileReadCount = 0;
+  const client = {
+    auth: {
+      getSession: async () => ({ data: { session: sessionA }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } })
+    },
+    rpc: async name => ({ data: name === 'is_verification_representative' ? false : true, error: null }),
+    from: table => ({
+      update: () => ({
+        eq: (_column, value) => {
+          updateUserId = value;
+          return Promise.resolve({ data: null, error: null });
+        }
+      }),
+      select: () => ({
+        eq: (_column, value) => ({
+          maybeSingle: async () => {
+            profileReadCount++;
+            if (table !== 'profiles' || value !== sessionA.user.id) {
+              throw new Error('Successful profile refresh was not bound to account A.');
+            }
+            return {
+              data: { display_name: 'Synthetic A', preferred_language: 'ky', school_id: null, grade_label: '9' },
+              error: null
+            };
+          }
+        })
+      })
+    })
+  };
+  const testWindow = {
+    YNTYMAK_CONFIG: {
+      supabaseUrl: 'https://example.invalid',
+      supabasePublishableKey: 'sb_publishable_synthetic_test'
+    },
+    supabase: { createClient: () => client },
+    dispatchEvent() {}
+  };
+  class TestCustomEvent {
+    constructor(type, options) { this.type = type; this.detail = options?.detail; }
+  }
+  const context = {
+    window: testWindow,
+    CustomEvent: TestCustomEvent,
+    console: { warn() {}, error() {}, log() {} }
+  };
+  new vm.Script(cloud, { filename: 'cloud.js' }).runInNewContext(context);
+  const api = testWindow.YntymakCloud;
+  await api.init();
+  const saved = await api.updateMyProfile({
+    displayName: 'Synthetic A',
+    gradeLabel: '9',
+    language: 'ky'
+  });
+  check(updateUserId === sessionA.user.id && profileReadCount === 1 &&
+    saved.displayName === 'Synthetic A' && saved.preferredLanguage === 'ky',
+    'A successful profile save in the same session must still return the saved profile.');
+}
+
+try {
+  await verifyProfileUpdateRace({ data: null, error: null }, 'successful update response');
+  await verifyProfileUpdateRace(
+    { data: null, error: new Error('stale synthetic update error') },
+    'failed update response'
+  );
+  await verifyProfileUpdateSuccess();
+} catch (error) {
+  check(false, 'Synthetic profile-update session test failed: ' + error.message);
+}
+
 if (errors.length) {
   for (const error of errors) console.error(`FAIL: ${error}`);
   console.error(`${errors.length} check(s) failed.`);
