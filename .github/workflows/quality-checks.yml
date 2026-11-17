@@ -40,3 +40,5 @@ jobs:
         run: node scripts/check-auth-module-bootstrap.mjs
       - name: Verify cross-tab auth synchronization with synthetic sessions
         run: node scripts/check-auth-cross-tab-sync.mjs
+      - name: Verify event registration session isolation with synthetic accounts
+        run: node scripts/check-event-registration-session.mjs
