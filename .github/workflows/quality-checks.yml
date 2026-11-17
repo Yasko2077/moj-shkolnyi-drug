@@ -30,3 +30,5 @@ jobs:
           node-version: 22
       - name: Validate JavaScript, cloud flags, profiles, and election safeguards
         run: node scripts/check-project.mjs
+      - name: Verify sign-in session races with synthetic accounts
+        run: node scripts/check-auth-signin-race.mjs

@@ -98,11 +98,35 @@
   }
   async function signIn({ email, password }) {
     const c = getClient(); if (!c) throw new Error('Настрой Supabase в supabase-config.js.');
+    const revision = authStateRevision;
     const { data, error } = await c.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    session = data.session; authUser = data.user;
-    await ensureProfile(); await checkAdmin();
-    return { user: authUser, isAdmin };
+    const requestedUser = data.user || data.session?.user || null;
+    const requestedUserId = requestedUser?.id || null;
+    const language = requestedUser?.user_metadata?.preferred_language || 'ru';
+    const sessionChangedError = () => new Error(language === 'ky'
+      ? 'Кирүү учурунда сеанс өзгөрдү. Кайра аракет кыл.'
+      : 'Сессия изменилась во время входа. Повтори попытку.');
+    if (!requestedUserId || !data.session) throw new Error('Не удалось подтвердить активную сессию. Повтори вход.');
+    if (revision !== authStateRevision) {
+      if (session?.user?.id !== requestedUserId) throw sessionChangedError();
+    } else {
+      session = data.session; authUser = requestedUser;
+    }
+    const assertCurrentSession = () => {
+      if (session?.user?.id !== requestedUserId) throw sessionChangedError();
+    };
+    assertCurrentSession();
+    try {
+      await ensureProfile();
+      assertCurrentSession();
+      const admin = await checkAdmin();
+      assertCurrentSession();
+      return { user: requestedUser, isAdmin: admin };
+    } catch (error) {
+      assertCurrentSession();
+      throw error;
+    }
   }
   async function signOut() {
     const c = getClient(); if (!c) return;
