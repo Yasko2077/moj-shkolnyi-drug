@@ -34,3 +34,5 @@ jobs:
         run: node scripts/check-auth-signin-race.mjs
       - name: Verify sign-up session races with synthetic accounts
         run: node scripts/check-auth-signup-race.mjs
+      - name: Verify assistant state isolation across account changes
+        run: node scripts/check-auth-chat-isolation.mjs
