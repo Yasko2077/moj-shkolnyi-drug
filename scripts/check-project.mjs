@@ -440,6 +440,45 @@ check(Boolean(surveyMarkup) &&
 
 
 
+const newsFormStart = app.indexOf('function newNews(){');
+const newsFormEnd = app.indexOf('\\nfunction loginModal(){', newsFormStart);
+const newsFormMarkup = newsFormStart >= 0 && newsFormEnd > newsFormStart
+  ? app.slice(newsFormStart, newsFormEnd)
+  : '';
+check(Boolean(newsFormMarkup) &&
+  newsFormMarkup.includes('<form id="newsForm"') &&
+  newsFormMarkup.includes('aria-labelledby="modalTitle"'),
+  'News form must have an accessible name.');
+for (const fieldId of ['newsTitle','newsText','newsCategory','newsDate']) {
+  check(newsFormMarkup.includes('for="'+fieldId+'"') &&
+    newsFormMarkup.includes('id="'+fieldId+'"'),
+    'News form label must be associated with its control: '+fieldId);
+}
+check(newsFormMarkup.includes("title:'Добавить новость'") &&
+  newsFormMarkup.includes("titleLabel:'Заголовок'") &&
+  newsFormMarkup.includes("submit:'Опубликовать'") &&
+  newsFormMarkup.includes("title:'Жаңылык кошуу'") &&
+  newsFormMarkup.includes("titleLabel:'Аталышы'") &&
+  newsFormMarkup.includes("submit:'Жарыялоо'"),
+  'News form must provide Russian and Kyrgyz titles, labels, and actions.');
+check(newsFormMarkup.includes('value="Объявление"') &&
+  newsFormMarkup.includes('value="Возможности"') &&
+  newsFormMarkup.includes('value="Образование"') &&
+  newsFormMarkup.includes('value="Платформа"'),
+  'Localized news category labels must preserve existing stored category values.');
+const newsCategoryStart = app.indexOf('function newsCategoryLabel(category){');
+const newsCategoryEnd = app.indexOf('\\nfunction ', newsCategoryStart + 1);
+const newsCategoryMarkup = newsCategoryStart >= 0 && newsCategoryEnd > newsCategoryStart
+  ? app.slice(newsCategoryStart, newsCategoryEnd)
+  : '';
+check(Boolean(newsCategoryMarkup) &&
+  newsCategoryMarkup.includes("'Объявление':'Жарыя'") &&
+  newsCategoryMarkup.includes("'Возможности':'Мүмкүнчүлүктөр'") &&
+  newsCategoryMarkup.includes("'Образование':'Билим берүү'") &&
+  newsCategoryMarkup.includes('return labels[category]||category;') &&
+  app.includes("newsCategoryLabel(n.category||'Объявление')"),
+  'News categories must be localized without changing stored values or unknown categories.');
+
 if (errors.length) {
   for (const error of errors) console.error(`FAIL: ${error}`);
   console.error(`${errors.length} check(s) failed.`);
