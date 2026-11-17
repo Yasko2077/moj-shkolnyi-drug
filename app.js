@@ -538,8 +538,8 @@ document.addEventListener('submit',async e=>{
    if(el.source==='cloud'&&window.YntymakCloud?.eventsEnabled()&&window.YntymakCloud?.getSession()){
     const registrationUserId=window.YntymakCloud.getSession()?.user?.id||null;
     const accountChangedMessage=state.lang==='KG'
-     ?'Катталуу учурунда аккаунт өзгөрдү. Кайра жөнөтүүдөн мурун баштапкы аккаунтка кирип, өтүнмөнүн абалын текшер.'
-     :'Во время регистрации сменился аккаунт. Перед повторной отправкой вернись в исходный аккаунт и проверь статус заявки.';
+     ?'Катталуу учурунда сеанс өзгөрдү. Кайра жөнөтүүдөн мурун баштапкы аккаунтка кирип, өтүнмөнүн абалын текшер.'
+     :'Во время регистрации изменился сеанс. Перед повторной отправкой вернись в исходный аккаунт и проверь статус заявки.';
     const accountChanged=()=>((window.YntymakCloud?.getSession()?.user?.id||null)!==registrationUserId);
     const notifyAccountChanged=()=>{if(f.isConnected)closeModal();toast(accountChangedMessage);};
     try{

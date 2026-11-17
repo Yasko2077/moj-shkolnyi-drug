@@ -4,7 +4,7 @@ import vm from 'node:vm';
 
 const app = readFileSync('app.js', 'utf8');
 const submitStart = app.indexOf("if(f.id==='registrationForm'){", app.indexOf("document.addEventListener('submit'"));
-const submitEnd = app.indexOf("\\n if(f.id==='profileForm')", submitStart);
+const submitEnd = app.indexOf("\n if(f.id==='profileForm')", submitStart);
 const submitBody = submitStart >= 0 && submitEnd > submitStart ? app.slice(submitStart, submitEnd) : '';
 const failures = [];
 function check(condition, message) {
@@ -81,7 +81,7 @@ async function verifySuccessAfterAccountSwitch() {
     'A successful response for the previous account must close the stale registration form.');
   check(harness.listCalls === 0 && harness.db.events[0].id === 'EV-SYNTHETIC',
     'A previous-account response must not refresh or overwrite the current account event list.');
-  check(harness.messages.some(message => message.includes('сменился аккаунт')),
+  check(harness.messages.some(message => message.includes('изменился сеанс')),
     'Russian UI must explain that the account changed and the original registration status must be checked.');
 }
 
@@ -98,7 +98,7 @@ async function verifyFailureAfterAccountSwitch() {
   await pending;
   check(harness.closeCalls === 1 && harness.listCalls === 0,
     'A failed response after an account switch must close the stale form and skip list refresh.');
-  check(harness.messages.some(message => message.includes('Катталуу учурунда аккаунт өзгөрдү')),
+  check(harness.messages.some(message => message.includes('Катталуу учурунда сеанс өзгөрдү')),
     'Kyrgyz UI must explain an account change without implying that the registration definitely failed.');
   check(!harness.messages.includes('synthetic registration failure'),
     'A stale account error must not be presented as an actionable error for the newly active account.');

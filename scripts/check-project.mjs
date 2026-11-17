@@ -556,10 +556,14 @@ check(registrationSubmitBody.includes("if(f.dataset.submitting==='true')return;"
   'Event registration must ignore duplicate in-flight submits, announce busy state, and unlock after recoverable errors.');
 const registrationRpcIndex = registrationSubmitBody.indexOf('await window.YntymakCloud.registerForEvent');
 const registrationCloseIndex = registrationSubmitBody.indexOf('if(registrationFormWasOpen)closeModal()', registrationRpcIndex);
-const registrationRefreshIndex = registrationSubmitBody.indexOf('db.events=await window.YntymakCloud.listEvents()', registrationRpcIndex);
+const registrationRefreshIndex = registrationSubmitBody.indexOf('const refreshedEvents=await window.YntymakCloud.listEvents()', registrationRpcIndex);
+const registrationSessionGuardIndex = registrationSubmitBody.indexOf('window.YntymakCloud?.getSession()!==refreshSession', registrationRefreshIndex);
+const registrationAssignIndex = registrationSubmitBody.indexOf('db.events=refreshedEvents', registrationSessionGuardIndex);
 check(registrationRpcIndex >= 0 && registrationCloseIndex > registrationRpcIndex &&
-  registrationRefreshIndex > registrationCloseIndex,
-  'After a successful registration RPC, close the submitted form before refreshing the event list to avoid retrying a saved registration.');
+  registrationRefreshIndex > registrationCloseIndex &&
+  registrationSessionGuardIndex > registrationRefreshIndex &&
+  registrationAssignIndex > registrationSessionGuardIndex,
+  'After a successful registration RPC, close the form, refresh under the captured session, and guard the event-list assignment against a replaced session.');
 const surveyStart = app.indexOf('function surveys(){');
 const surveyEnd = app.indexOf('function news(){', surveyStart);
 const surveyMarkup = surveyStart >= 0 && surveyEnd > surveyStart
