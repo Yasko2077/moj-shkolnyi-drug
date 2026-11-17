@@ -441,7 +441,7 @@ check(Boolean(surveyMarkup) &&
 
 
 const newsFormStart = app.indexOf('function newNews(){');
-const newsFormEnd = app.indexOf('\\nfunction loginModal(){', newsFormStart);
+const newsFormEnd = app.indexOf('function loginModal(){', newsFormStart);
 const newsFormMarkup = newsFormStart >= 0 && newsFormEnd > newsFormStart
   ? app.slice(newsFormStart, newsFormEnd)
   : '';
@@ -467,7 +467,7 @@ check(newsFormMarkup.includes('value="Объявление"') &&
   newsFormMarkup.includes('value="Платформа"'),
   'Localized news category labels must preserve existing stored category values.');
 const newsCategoryStart = app.indexOf('function newsCategoryLabel(category){');
-const newsCategoryEnd = app.indexOf('\\nfunction ', newsCategoryStart + 1);
+const newsCategoryEnd = app.indexOf('function ', newsCategoryStart + 1);
 const newsCategoryMarkup = newsCategoryStart >= 0 && newsCategoryEnd > newsCategoryStart
   ? app.slice(newsCategoryStart, newsCategoryEnd)
   : '';
