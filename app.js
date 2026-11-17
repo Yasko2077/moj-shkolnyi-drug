@@ -10,8 +10,8 @@ const DISTRICTS = [
   {key:'sverdlov', ru:'Свердловский район', ky:'Свердлов району'}
 ];
 const TXT = {
-  RU:{home:'Главная',ideas:'Предложения',elections:'Выборы',projects:'Проекты и команды',events:'Мероприятия',surveys:'Опросы мнения',news:'Новости и ресурсы',assistant:'ИИ-помощник',profile:'Мой профиль',help:'Помощь и безопасность',admin:'Управление',login:'Войти / регистрация',logout:'Выйти'},
-  KG:{home:'Башкы бет',ideas:'Сунуштар',elections:'Шайлоолор',projects:'Долбоорлор жана командалар',events:'Иш-чаралар',surveys:'Пикир сурамжылоолору',news:'Жаңылыктар жана ресурстар',assistant:'ЖИ жардамчысы',profile:'Менин профилим',help:'Жардам жана коопсуздук',admin:'Башкаруу',login:'Кирүү / катталуу',logout:'Чыгуу'}
+  RU:{home:'Главная',ideas:'Предложения',elections:'Выборы',projects:'Проекты и команды',events:'Мероприятия',surveys:'Опросы мнения',news:'Новости и ресурсы',assistant:'ИИ-помощник',profile:'Мой профиль',help:'Помощь и безопасность',admin:'Управление',login:'Войти / регистрация',logout:'Выйти',close:'Закрыть'},
+  KG:{home:'Башкы бет',ideas:'Сунуштар',elections:'Шайлоолор',projects:'Долбоорлор жана командалар',events:'Иш-чаралар',surveys:'Пикир сурамжылоолору',news:'Жаңылыктар жана ресурстар',assistant:'ЖИ жардамчысы',profile:'Менин профилим',help:'Жардам жана коопсуздук',admin:'Башкаруу',login:'Кирүү / катталуу',logout:'Чыгуу',close:'Жабуу'}
 };
 const now = new Date();
 const dateLabel = d => {
@@ -207,7 +207,7 @@ let modalReturnFocus=null;
 function modal(title,body){
  const root=$('#modalRoot');
  if(!root.querySelector('[role="dialog"]'))modalReturnFocus=document.activeElement;
- root.innerHTML=`<div class="modal-backdrop" data-backdrop><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1"><div class="modal-head"><h2 id="modalTitle">${esc(title)}</h2><button class="modal-close" data-close-modal aria-label="Закрыть">×</button></div><div class="modal-body">${body}</div></div></div>`;
+ root.innerHTML=`<div class="modal-backdrop" data-backdrop><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1"><div class="modal-head"><h2 id="modalTitle">${esc(title)}</h2><button class="modal-close" data-close-modal aria-label="${esc(t('close'))}">×</button></div><div class="modal-body">${body}</div></div></div>`;
  const dialog=root.querySelector('[role="dialog"]');
  const focusTarget=$('input:not([type="hidden"]):not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),a[href]',dialog)
   .find(el=>!el.hidden&&el.getClientRects().length>0)||dialog;
