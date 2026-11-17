@@ -59,6 +59,7 @@ function readLocalStore(key){
 let activeStore=STORE;
 let db=readLocalStore(activeStore);
 const state={page:'home',lang:'RU',chat:[],admin:false,realAdmin:false,cloudProfile:false,adminTab:'overview',filter:'all',busy:false,aiConsent:false,pendingQuestion:''};
+let chatSessionRevision=0;
 const t=k=>TXT[state.lang][k]||TXT.RU[k]||k;
 const langCode=()=>state.lang==='KG'?'ky':'ru';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -223,6 +224,14 @@ function closeModal(){
   const fallback=$('#pageContent h1')||$('#pageContent');
   if(fallback){if(!fallback.hasAttribute('tabindex'))fallback.setAttribute('tabindex','-1');fallback.focus();}
  });
+}
+function resetAccountScopedAssistantState(){
+ chatSessionRevision++;
+ state.chat=[];
+ state.pendingQuestion='';
+ state.aiConsent=false;
+ state.busy=false;
+ closeModal();
 }
 const districtOptions=()=>DISTRICTS.map(d=>`<option value="${d.key}">${esc(d.ru)}</option>`).join('');
 function newIdea(){modal('Новое предложение',`<div class="notice gold" style="margin-bottom:13px">Внутреннее предложение для школьного сообщества. Не добавляй личные данные или обвинения против конкретных людей.</div><form id="ideaForm" class="field-grid" aria-labelledby="modalTitle"><div class="field full"><label for="ideaTitle">Короткое название</label><input id="ideaTitle" name="title" minlength="5" maxlength="100" required></div><div class="field full"><label for="ideaDescription">Что хотелось бы улучшить?</label><textarea id="ideaDescription" name="description" minlength="20" maxlength="900" required placeholder="Опиши проблему и возможное решение"></textarea></div><div class="field"><label for="ideaCategory">Категория</label><select id="ideaCategory" name="category"><option>Школьная среда</option><option>Образование</option><option>Экология</option><option>Спорт и культура</option><option>Безопасность среды</option><option>Сотрудничество</option></select></div><div class="field"><label for="ideaScope">Уровень</label><select id="ideaScope" name="scope"><option value="school">Моя школа</option><option value="district">Район</option><option value="city">Весь Бишкек</option></select></div><div class="field full"><label for="ideaTarget">Школа или территория</label><input id="ideaTarget" name="target" maxlength="120" value="${esc(db.profile.school||'')}" required></div><div class="field full form-actions"><button type="button" class="btn btn-outline" data-close-modal>Отмена</button><button class="btn" type="submit">Отправить на модерацию</button></div></form>`);}
@@ -406,12 +415,14 @@ function localAssistant(question){
 }
 async function sendChat(q,forceLocal=false){
  if(!q||state.busy)return;
+ const requestRevision=chatSessionRevision;
  if(hasPersonalData(q)){state.chat.push({who:'bot',text:'Похоже, в сообщении есть электронная почта или номер телефона. Удали их и отправь вопрос без персональных данных. Не отправляй сведения о других учениках.'});render();return;}
  const useHosted=!forceLocal&&window.YntymakCloud?.hostedAIEnabled()&&window.YntymakCloud.getSession();
  if(useHosted&&!state.aiConsent){state.pendingQuestion=q;modal('Перед обращением к внешнему ИИ',`<div class="notice gold">Текст вопроса и до 6 последних сообщений диалога будут отправлены из защищённой функции Supabase внешнему поставщику языковой модели. Данные профиля автоматически не отправляются. Обработка может происходить за пределами Кыргызстана. Не отправляй персональные данные, имена, телефоны, адреса, документы, пароли или личные истории. Владелец платформы должен отдельно проверить требования закона о детских данных и трансграничной передаче до включения этой функции. История не сохраняется в профиле приложения.</div><p class="card-sub">Продолжить можно с этим вопросом или получить ответ локального помощника без внешней модели.</p><div class="action-row">${btn('Остаться в локальном режиме','data-ai-local','btn-outline')}${btn('Согласен отправить текст','data-ai-consent')}</div>`);return;}
  const history=state.chat.slice(-6).filter(m=>['user','bot'].includes(m.who)&&typeof m.text==='string'&&m.text.length<=700&&!hasPersonalData(m.text)).map(m=>({role:m.who==='bot'?'assistant':'user',content:m.text}));
  state.chat.push({who:'user',text:q});state.busy=true;render();let answer='';
- try{if(useHosted)answer=await window.YntymakCloud.askHostedAI(q,langCode(),history);else answer=localAssistant(q);}catch(e){answer=localAssistant(q)+'\n\n(Внешняя ИИ-модель сейчас недоступна; дан ответ локального помощника.)';}
+ try{if(useHosted)answer=await window.YntymakCloud.askHostedAI(q,langCode(),history);else answer=localAssistant(q);}catch(e){if(requestRevision!==chatSessionRevision)return;answer=localAssistant(q)+'\\n\\n(Внешняя ИИ-модель сейчас недоступна; дан ответ локального помощника.)';}
+ if(requestRevision!==chatSessionRevision)return;
  state.chat.push({who:'bot',text:answer});state.busy=false;render();
 }
 function addAudit(text){db.audit.push({text,date:new Date().toLocaleString('ru-RU')});persist();}
@@ -510,6 +521,7 @@ document.addEventListener('submit',async e=>{
 });
 window.addEventListener('yntymak:auth-change', event => {
  const userId=event.detail?.userId||null;
+ resetAccountScopedAssistantState();
  state.admin=false;state.realAdmin=false;state.cloudProfile=false;
  activateAccountStore();
  render();
